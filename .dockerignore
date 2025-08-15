@@ -1,0 +1,34 @@
+# Docker-related files
+*.log
+*.pid
+
+# Docker Compose override files
+docker-compose.override.yml
+
+# Docker env files
+.env
+.env.*
+
+# Docker volumes
+**/data/
+**/volumes/
+**/db-data/
+**/db/
+**/tmp/
+
+# Docker build artifacts
+**/Dockerfile.*
+.dockerignore
+docker-entrypoint.sh
+
+# Ignore mounted secrets or sensitive files
+secrets/
+certs/
+*.crt
+*.key
+*.pem
+
+# Ignore Docker-generated files
+docker-compose.override.yml
+docker-compose.local.yml
+docker-compose.debug.yml
