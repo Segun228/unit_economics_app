@@ -23,7 +23,7 @@ database = os.getenv("DATABASE_URL")
 
 ALLOWED_HOSTS = ["*"]
 
-AUTH_USER_MODEL = 'authentication.User'
+AUTH_USER_MODEL = 'users.User'
 CORS_ALLOW_ALL_ORIGINS = True
 
 INSTALLED_APPS = [
