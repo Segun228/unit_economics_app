@@ -2,13 +2,11 @@ from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIV
 from api.models import UnitModel, ModelSet
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
-from .models import ModelSet, UnitModel
-
 from .serializers import ModelSetReadSerializer, ModelSetSerializer, UnitModelSerializer
 
 from .permissions import IsAdminOrDebugOrReadOnly
 
-from backend.backend.authentication import TelegramAuthentication
+from backend.authentication import TelegramAuthentication
 
 
 
@@ -22,8 +20,11 @@ class ListCreateModeSetlView(ListCreateAPIView):
             return ModelSetReadSerializer
         return ModelSetSerializer
 
+    def perform_create(self, serializer):
+            serializer.save(user=self.request.user)
 
-class RetrieveUpdateDestroyModelSetView(ListCreateAPIView):
+
+class RetrieveUpdateDestroyModelSetView(RetrieveUpdateDestroyAPIView):
     authentication_classes = [TelegramAuthentication]
     permission_classes = [IsAuthenticated]
     queryset = ModelSet.objects.all()
@@ -42,14 +43,17 @@ class ListCreateUnitModelView(ListCreateAPIView):
     permission_classes = [IsAuthenticated]
     queryset = UnitModel.objects.all()
     serializer_class = UnitModelSerializer
+    
+    def perform_create(self, serializer):
+            serializer.save(user=self.request.user)
 
 
 
-class RetrieveUpdateDestroyUnitModelView(ListCreateAPIView):
+class RetrieveUpdateDestroyUnitModelView(RetrieveUpdateDestroyAPIView):
     authentication_classes = [TelegramAuthentication]
     permission_classes = [IsAuthenticated]
     queryset = UnitModel.objects.all()
     lookup_field = 'id'
-    lookup_url_kwarg = 'set_id'
+    lookup_url_kwarg = 'unit_id'
     serializer_class = UnitModelSerializer
 
