@@ -12,7 +12,7 @@ debug = os.getenv("DEBUG", "False").lower() == "true"
 
 admins = [admin_one, admin_two]
 
-class IsAdminOrDebugOrReadOnly(permissions.BasePermission):
+class IsAdminCustom(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
             return True

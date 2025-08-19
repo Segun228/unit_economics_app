@@ -16,6 +16,7 @@ class ModelSet(models.Model):
 class UnitModel(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="single_combination")
     model_set = models.ForeignKey(ModelSet, on_delete=models.CASCADE, related_name="single_combination")
+    name = models.CharField(blank=True, max_length=200, default="")
     users = models.IntegerField(blank=False, null=False, default=0)
     customers = models.IntegerField(blank=False, null=False, default=0)
     AVP = models.IntegerField(blank=False, null=False, default=0)

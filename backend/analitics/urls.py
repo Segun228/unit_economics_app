@@ -25,4 +25,7 @@ urlpatterns = [
     path('get_kpi/unit/<int:unit_id>/break_even_point/', views.UnitKPICountBEPView.as_view(), name='kpi_unit_bep'),
     path('get_kpi/unit/<int:unit_id>/required_investments/', views.UnitKPICountRIView.as_view(), name='kpi_unit_ri'),
     path('get_kpi/unit/<int:unit_id>/expected_profit/', views.UnitKPICountEPView.as_view(), name='kpi_unit_ep'),
+
+    # ---------------- SCAN EXCEL ----------------
+    path('file/upload/', views.FileUploadView.as_view(), name='file_upload_endpoint'),
 ]

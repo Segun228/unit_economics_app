@@ -10,6 +10,7 @@ class UnitModelSerializer(serializers.ModelSerializer):
             'user',
             'model_set',
             'users',
+            "name"
             'customers',
             'AVP',
             'APC',
