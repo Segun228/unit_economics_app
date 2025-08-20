@@ -50,7 +50,7 @@ async def put_post(
         async with session.put(
             exact_url, 
             headers=headers,
-            data = data
+            json = data
         ) as response:
             if response.status in (200, 201, 202, 203):
                 logging.info("категории получены")

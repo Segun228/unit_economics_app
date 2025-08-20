@@ -11,7 +11,7 @@ from backend.authentication import TelegramAuthentication
 
 from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
-
+import logging
 
 class AuthenticatedAPIView:
     authentication_classes = [TelegramAuthentication]
@@ -60,7 +60,6 @@ class ListCreateUnitModelView(ListCreateAPIView):
         model_set = get_object_or_404(ModelSet, id=set_id, user=self.request.user)
         serializer.save(user=self.request.user, model_set=model_set)
 
-
 class RetrieveUpdateDestroyUnitModelView(AuthenticatedAPIView, RetrieveUpdateDestroyAPIView):
     lookup_field = 'id'
     lookup_url_kwarg = 'unit_id'
@@ -68,5 +67,7 @@ class RetrieveUpdateDestroyUnitModelView(AuthenticatedAPIView, RetrieveUpdateDes
 
     def get_queryset(self):
         set_id = self.kwargs.get("set_id")
+        if set_id is None:
+            logging.error("set_id не передан в URL")
+            raise Exception("set_id не передан в URL")
         return UnitModel.objects.filter(model_set_id=set_id, user=self.request.user)
-

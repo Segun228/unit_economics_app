@@ -14,7 +14,7 @@ from aiogram.types import InputFile
 
 from app.keyboards import inline_user as inline_keyboards
 
-from app.states.states import Unit, Set, Send, File
+from app.states.states import Unit, Set, Send, File, UnitEdit
 
 from aiogram.types import BufferedInputFile
 
@@ -102,8 +102,8 @@ async def main_menu_callback(callback: CallbackQuery):
 #===========================================================================================================================
 @router.callback_query(F.data == "catalogue")
 async def catalogue_callback_admin(callback: CallbackQuery):
-    categories = await get_sets(telegram_id= callback.from_user.id)
-    await callback.message.answer("Вот доступные проекты (наборы моделей экономики)👇", reply_markup= await get_catalogue(categories= categories, telegram_id=callback.from_user.id))
+    categories = await get_sets(telegram_id=callback.from_user.id)
+    await callback.message.answer("Вот доступные проекты (наборы моделей экономики)👇", reply_markup= await get_catalogue(categories=categories, telegram_id=callback.from_user.id))
     await callback.answer()
 
 
@@ -111,7 +111,7 @@ async def catalogue_callback_admin(callback: CallbackQuery):
 async def category_catalogue_callback_admin(callback: CallbackQuery):
     await callback.answer()
     category_id = callback.data.split("_")[1]
-    categories = await get_sets(telegram_id= callback.from_user.id)
+    categories = await get_sets(telegram_id=callback.from_user.id)
     print(category_id)
     current_category = None
     if categories is not None:
@@ -120,11 +120,11 @@ async def category_catalogue_callback_admin(callback: CallbackQuery):
                 current_category = category
                 break
     
-    if current_category is None or current_category.get("posts") is None or current_category.get("posts") == []:
-        await callback.message.answer("Извините, тут пока пусто, возвращаейтесь позже!", reply_markup= await get_posts(posts=current_category.get("posts"), category=current_category ))
+    if current_category is None or current_category.get("units") is None or current_category.get("units") == []:
+        await callback.message.answer("Извините, тут пока пусто, возвращаейтесь позже!", reply_markup= await get_posts(posts=current_category.get("units"), category=current_category ))
         await callback.answer()
         return
-    await callback.message.answer("Вот доступные модели юнит-экономики👇", reply_markup= await get_posts(category= current_category ,posts = current_category.get("posts", [])))
+    await callback.message.answer("Вот доступные модели юнит-экономики👇", reply_markup= await get_posts(category= current_category ,posts = current_category.get("units", [])))
 
 
 @router.callback_query(F.data.startswith("post_"))
@@ -134,26 +134,32 @@ async def post_catalogue_callback_admin(callback: CallbackQuery):
     category_id = callback.data.split("_")[1]
     post_data = await get_post(
         telegram_id=callback.from_user.id,
-        post_id = post_id,
-        category_id = category_id
+        post_id=post_id,
+        category_id=category_id
     )
-    if post_data is None or not post_data:
+    if not post_data:
         await callback.message.answer("Извините, не удалось получить доступ к позиции", reply_markup=inline_keyboards.home)
         return
+
     message_text = (
-        f"📝 **Информация о товаре:**\n\n"
-        f"**Название:** `{post_data.get('title')}`\n\n"
-        f"**Описание:** `{post_data.get('description')}`\n\n"
-        f"**Прайс:** `{post_data.get('price')}`\n\n"
-        f"**Страна:** `{post_data.get('country')}`\n\n"
-        f"**Вес:** `{post_data.get('weight')}`\n\n"
+        f"📦 **Информация об юните:**\n\n"
+        f"**Название:** `{post_data.get('name')}`\n"
+        f"**Users:** `{post_data.get('users')}`\n"
+        f"**Customers:** `{post_data.get('customers')}`\n"
+        f"**AVP:** `{post_data.get('AVP')}`\n"
+        f"**APC:** `{post_data.get('APC')}`\n"
+        f"**TMS:** `{post_data.get('TMS')}`\n"
+        f"**COGS:** `{post_data.get('COGS')}`\n"
+        f"**COGS1s:** `{post_data.get('COGS1s')}`\n"
+        f"**FC:** `{post_data.get('FC')}`\n"
     )
+
     await callback.message.answer(
         text=message_text,
         parse_mode="MarkdownV2",
-        reply_markup= await inline_keyboards.get_post_menu(
-            category_id= category_id,
-            post_id= post_id,
+        reply_markup=await inline_keyboards.get_post_menu(
+            category_id=category_id,
+            post_id=post_id,
         )
     )
 
@@ -169,10 +175,21 @@ async def category_create_callback_admin(callback: CallbackQuery, state: FSMCont
     await state.set_state(Set.handle_set)
     await callback.answer()
 
+
 @router.message(Set.handle_set)
-async def category_enter_name_admin(message: Message, state: FSMContext):
+async def category_create_callback_admin_description(message: Message, state: FSMContext):
     name = (message.text).strip()
-    response = await post_set(telegram_id=message.from_user.id, name=name)
+    await state.update_data(name = name)
+    await message.answer("Введите описание набора моделей экономики")
+    await state.set_state(Set.description)
+
+
+@router.message(Set.description)
+async def category_enter_name_admin(message: Message, state: FSMContext):
+    description = (message.text).strip()
+    data = await state.get_data()
+    name = data.get("name")
+    response = await post_set(telegram_id=message.from_user.id, name=name, description= description)
     if not response:
         await message.answer("Извините, не удалось создать набор моделей", reply_markup=inline_keyboards.main)
         return
@@ -183,91 +200,145 @@ async def category_enter_name_admin(message: Message, state: FSMContext):
 #===========================================================================================================================
 # Создание юнита
 #===========================================================================================================================
-
-
 @router.callback_query(F.data.startswith("create_post_"))
 async def post_create_callback_admin(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
     await state.clear()
-    catergory_id = callback.data.split("_")[2]
-    await state.update_data(category = catergory_id)
+    category_id = callback.data.split("_")[2]
+    await state.update_data(model_set=category_id)
     await callback.message.answer("Введите название модели")
-    await state.set_state(Post.handle_post)
+    await state.set_state(Unit.name)
 
 
-@router.message(Post.handle_post)
+@router.message(Unit.name)
 async def post_enter_name_admin(message: Message, state: FSMContext):
-    title = (message.text).strip()
-    if not title:
+    name = message.text.strip()
+    if not name:
         await message.answer("Введите валидное имя модели")
         return
-    await state.update_data(title = title)
-    await state.set_state(Post.title)
-    await message.answer("Введите описание поста")
+    await state.update_data(name=name)
+    await state.set_state(Unit.users)
+    await message.answer("Введите количество привлеченных пользователей")
 
 
-@router.message(Post.title)
+@router.message(Unit.users)
 async def post_enter_description_admin(message: Message, state: FSMContext):
-    description = (message.text).strip()
-    if not description:
-        await message.answer("Введите валидное описание поста")
+    users = message.text.strip()
+    if not users.isdigit():
+        await message.answer("Введите валидное число привлеченных пользователей")
         return
-    await state.update_data(description=description)
-    await state.set_state(Post.description)
-    await message.answer("Введите цену")
+    await state.update_data(users=int(users))
+    await state.set_state(Unit.customers)
+    await message.answer("Введите количество полученных клиентов")
 
 
-@router.message(Post.description)
+@router.message(Unit.customers)
 async def post_enter_price_admin(message: Message, state: FSMContext):
-    price = (message.text).strip()
-    if not price or not price.isdigit():
-        await message.answer("Введите валидную цену")
+    customers = message.text.strip()
+    if not customers.isdigit():
+        await message.answer("Введите валидное число полученных клиентов")
         return
-    await state.update_data(price = price)
-    await state.set_state(Post.price)
-    await message.answer("Введите страну происхождения")
+    await state.update_data(customers=int(customers))
+    await state.set_state(Unit.AVP)
+    await message.answer("Введите AVP (Average Value of Payment)")
 
 
-@router.message(Post.price)
+@router.message(Unit.AVP)
 async def post_enter_country_admin(message: Message, state: FSMContext):
-    country = (message.text).strip()
-    if not country:
-        await message.answer("Введите валидное название страны")
+    avp = message.text.strip()
+    if not avp.isdigit():
+        await message.answer("Введите валидное число AVP (Average Value of Payment)")
         return
-    await state.update_data(country = country)
-    await state.set_state(Post.country)
-    await message.answer("Введите вес")
+    await state.update_data(AVP=int(avp))
+    await state.set_state(Unit.APC)
+    await message.answer("Введите APC (Average Purchase Count)")
 
-@router.message(Post.country)
-async def post_enter_quantity_admin(message: Message, state: FSMContext):
-    weight = (message.text).strip()
-    if not weight or not weight.isdigit():
-        await message.answer("Введите валидное количество")
+
+@router.message(Unit.APC)
+async def post_enter_apc_admin(message: Message, state: FSMContext):
+    apc = message.text.strip()
+    if not apc.isdigit():
+        await message.answer("Введите валидное число APC (Average Purchase Count)")
         return
+    await state.update_data(APC=int(apc))
+    await state.set_state(Unit.TMS)
+    await message.answer("Введите TMS (Total Marketing Spends)")
+
+
+@router.message(Unit.TMS)
+async def post_enter_tms_admin(message: Message, state: FSMContext):
+    tms = message.text.strip()
+    if not tms.isdigit():
+        await message.answer("Введите валидное число TMS (Total Marketing Spends)")
+        return
+    await state.update_data(TMS=int(tms))
+    await state.set_state(Unit.COGS)
+    await message.answer("Введите COGS (Cost of goods sold)")
+
+
+@router.message(Unit.COGS)
+async def post_enter_cogs_admin(message: Message, state: FSMContext):
+    cogs = message.text.strip()
+    if not cogs.isdigit():
+        await message.answer("Введите валидное число COGS (Cost of goods sold)")
+        return
+    await state.update_data(COGS=int(cogs))
+    await state.set_state(Unit.COGS1s)
+    await message.answer("Введите COGS1s (Cost of goods sold first sale)")
+
+
+@router.message(Unit.COGS1s)
+async def post_enter_cogs1s_admin(message: Message, state: FSMContext):
+    cogs1s = message.text.strip()
+    if not cogs1s.isdigit():
+        await message.answer("Введите валидное число COGS1s (Cost of goods sold first sale)")
+        return
+    await state.update_data(COGS1s=int(cogs1s))
+    await state.set_state(Unit.FC)
+    await message.answer("Введите FC (Fixed Costs)")
+
+
+@router.message(Unit.FC)
+async def post_enter_fc_admin(message: Message, state: FSMContext):
+    fc = message.text.strip()
+    if not fc.isdigit():
+        await message.answer("Введите валидное число FC (Fixed Costs)")
+        return
+
+    await state.update_data(FC=int(fc))
     data = await state.get_data()
-    post_data = await post_post(
-        telegram_id= message.from_user.id,
-        category_id= data.get("category"),
-        title = data.get("title"),
-        description= data.get("description"),
-        country= data.get("country"),
-        price = data.get("price"),
-        weight= weight
+    unit_data = await post_post(
+        telegram_id=message.from_user.id,
+        category_id=data.get("model_set"),
+        name=data.get("name"),
+        users=data.get("users"),
+        customers=data.get("customers"),
+        AVP=data.get("AVP"),
+        APC=data.get("APC"),
+        TMS=data.get("TMS"),
+        COGS=data.get("COGS"),
+        COGS1s=data.get("COGS1s"),
+        FC=data.get("FC"),
     )
-    if not post_data:
-        await message.answer("Извините, ошибка при создании поста", reply_markup=await get_catalogue(telegram_id = message.from_user.id))
+    if not unit_data:
+        await message.answer("Ошибка при создании юнита", reply_markup=await get_catalogue(message.from_user.id))
         return
-    await message.answer("Пост успешно создан")
-    message_text = (
-        f"📝 **Информация о товаре:**\n\n"
-        f"**Название:** `{post_data.get('title')}`\n\n"
-        f"**Описание:** `{post_data.get('description')}`\n\n"
-        f"**Прайс:** `{post_data.get('price')}`\n\n"
-        f"**Страна:** `{post_data.get('country')}`\n\n"
-        f"**Вес:** `{post_data.get('weight')}`\n\n"
+
+    msg = (
+        f"🧩 **Модель успешно создана:**\n\n"
+        f"**Название:** `{unit_data.get('name')}`\n"
+        f"**Пользователи:** `{unit_data.get('users')}`\n"
+        f"**Клиенты:** `{unit_data.get('customers')}`\n"
+        f"**AVP:** `{unit_data.get('AVP')}`\n"
+        f"**APC:** `{unit_data.get('APC')}`\n"
+        f"**TMS:** `{unit_data.get('TMS')}`\n"
+        f"**COGS:** `{unit_data.get('COGS')}`\n"
+        f"**COGS1s:** `{unit_data.get('COGS1s')}`\n"
+        f"**FC:** `{unit_data.get('FC')}`"
     )
-    await message.answer(message_text, reply_markup=await inline_keyboards.get_post_menu(category_id=post_data.get("category"), post_id=post_data.get("id")), parse_mode="MarkdownV2")
+    await message.answer(msg, parse_mode="MarkdownV2", reply_markup=await inline_keyboards.get_post_menu(category_id=data.get("model_set"), post_id=unit_data.get("id")))
     await state.clear()
+
 #===========================================================================================================================
 # Редактирование сета
 #===========================================================================================================================
@@ -278,14 +349,24 @@ async def category_edit_callback_admin(callback: CallbackQuery, state: FSMContex
     category_id = callback.data.split("_")[2]
     await state.set_state(Set.handle_edit_set)
     await state.update_data(category_id = category_id)
-    await callback.message.answer("Введите название сета")
+    await callback.message.answer("Введите новое название сета")
+
 
 @router.message(Set.handle_edit_set)
+async def category_edit_callback_admin_description(message: Message, state: FSMContext):
+    name = (message.text).strip()
+    await state.update_data(name = name)
+    await message.answer("Введите новое описание набора моделей экономики")
+    await state.set_state(Set.edit_description)
+
+
+@router.message(Set.edit_description)
 async def category_edit_name_admin(message: Message, state: FSMContext):
     data = await state.get_data()
     category_id = data.get("category_id")
-    name = (message.text).strip()
-    response = await put_set(telegram_id=message.from_user.id, name=name, category_id=category_id)
+    name = data.get("name")
+    description = (message.text).strip()
+    response = await put_set(telegram_id=message.from_user.id, name=name, category_id=category_id, description=description)
     if not response:
         await message.answer("Извините, не удалось отредактировать сет", reply_markup=inline_keyboards.main)
         return
@@ -295,95 +376,156 @@ async def category_edit_name_admin(message: Message, state: FSMContext):
 #===========================================================================================================================
 # Редактирование поста
 #===========================================================================================================================
-
-
 @router.callback_query(F.data.startswith("edit_post_"))
 async def post_edit_callback_admin(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
     await state.clear()
-    catergory_id, post_id = callback.data.split("_")[2:]
-    await state.update_data(category = catergory_id)
-    await state.update_data(post_id = post_id)
-    await callback.message.answer("Введите название поста")
-    await state.set_state(Post.handle_edit_post)
+    category_id, unit_id = callback.data.split("_")[2:]
+    await state.update_data(category_id=category_id)
+    await state.update_data(post_id=unit_id)
+    await callback.message.answer("Введите новое название модели")
+    await state.set_state(UnitEdit.handle_edit_unit)
 
 
-@router.message(Post.handle_edit_post)
+@router.message(UnitEdit.handle_edit_unit)
 async def post_edit_name_admin(message: Message, state: FSMContext):
-    title = (message.text).strip()
-    if not title:
-        await message.answer("Введите валидное имя поста")
+    name = message.text.strip()
+    if not name:
+        await message.answer("Введите валидное имя модели")
         return
-    await state.update_data(title = title)
-    await state.set_state(Post.title)
-    await message.answer("Введите описание поста")
+    await state.update_data(name=name)
+    await state.set_state(UnitEdit.users)
+    await message.answer("Введите значение users")
 
 
-@router.message(Post.title)
-async def post_edit_description_admin(message: Message, state: FSMContext):
-    description = (message.text).strip()
-    if not description:
-        await message.answer("Введите валидное описание поста")
+@router.message(UnitEdit.users)
+async def post_edit_users_admin(message: Message, state: FSMContext):
+    users = message.text.strip()
+    if not users.isdigit():
+        await message.answer("Введите валидное число пользователей")
         return
-    await state.update_data(description=description)
-    await state.set_state(Post.description)
-    await message.answer("Введите цену")
+    await state.update_data(users=int(users))
+    await state.set_state(UnitEdit.customers)
+    await message.answer("Введите значение customers")
 
 
-@router.message(Post.description)
-async def post_edit_price_admin(message: Message, state: FSMContext):
-    price = (message.text).strip()
-    if not price or not price.isdigit():
-        await message.answer("Введите валидную цену")
+@router.message(UnitEdit.customers)
+async def post_edit_customers_admin(message: Message, state: FSMContext):
+    customers = message.text.strip()
+    if not customers.isdigit():
+        await message.answer("Введите валидное число клиентов")
         return
-    await state.update_data(price = price)
-    await state.set_state(Post.price)
-    await message.answer("Введите страну происхождения")
+    await state.update_data(customers=int(customers))
+    await state.set_state(UnitEdit.AVP)
+    await message.answer("Введите значение AVP")
 
 
-@router.message(Post.price)
-async def post_edit_country_admin(message: Message, state: FSMContext):
-    country = (message.text).strip()
-    if not country:
-        await message.answer("Введите валидное название страны")
+@router.message(UnitEdit.AVP)
+async def post_edit_avp_admin(message: Message, state: FSMContext):
+    avp = message.text.strip()
+    if not avp.isdigit():
+        await message.answer("Введите валидное значение AVP")
         return
-    await state.update_data(country = country)
-    await state.set_state(Post.country)
-    await message.answer("Введите вес")
+    await state.update_data(AVP=int(avp))
+    await state.set_state(UnitEdit.APC)
+    await message.answer("Введите значение APC")
 
 
-@router.message(Post.country)
-async def post_edit_quantity_admin(message: Message, state: FSMContext):
-    weight = (message.text).strip()
-    if not weight or not weight.isdigit():
-        await message.answer("Введите валидное количество")
+@router.message(UnitEdit.APC)
+async def post_edit_apc_admin(message: Message, state: FSMContext):
+    apc = message.text.strip()
+    if not apc.isdigit():
+        await message.answer("Введите валидное значение APC")
         return
+    await state.update_data(APC=int(apc))
+    await state.set_state(UnitEdit.TMS)
+    await message.answer("Введите значение TMS")
+
+
+@router.message(UnitEdit.TMS)
+async def post_edit_tms_admin(message: Message, state: FSMContext):
+    tms = message.text.strip()
+    if not tms.isdigit():
+        await message.answer("Введите валидное значение TMS")
+        return
+    await state.update_data(TMS=int(tms))
+    await state.set_state(UnitEdit.COGS)
+    await message.answer("Введите значение COGS")
+
+
+@router.message(UnitEdit.COGS)
+async def post_edit_cogs_admin(message: Message, state: FSMContext):
+    cogs = message.text.strip()
+    if not cogs.isdigit():
+        await message.answer("Введите валидное значение COGS")
+        return
+    await state.update_data(COGS=int(cogs))
+    await state.set_state(UnitEdit.COGS1s)
+    await message.answer("Введите значение COGS1s")
+
+
+@router.message(UnitEdit.COGS1s)
+async def post_edit_cogs1s_admin(message: Message, state: FSMContext):
+    cogs1s = message.text.strip()
+    if not cogs1s.isdigit():
+        await message.answer("Введите валидное значение COGS1s")
+        return
+    await state.update_data(COGS1s=int(cogs1s))
+    await state.set_state(UnitEdit.FC)
+    await message.answer("Введите значение FC")
+
+
+@router.message(UnitEdit.FC)
+async def post_edit_fc_admin(message: Message, state: FSMContext):
+    fc = message.text.strip()
+    if not fc.isdigit():
+        await message.answer("Введите валидное значение FC")
+        return
+
     data = await state.get_data()
-    post_data = await put_post(
-        telegram_id= message.from_user.id,
-        category_id= data.get("category"),
-        title = data.get("title"),
-        description= data.get("description"),
-        country= data.get("country"),
-        price = data.get("price"),
-        weight= weight,
-        post_id= data.get("post_id"),
+    logging.warning(f"DATA: {data}")
+    unit_data = await put_post(
+        telegram_id=message.from_user.id,
+        category_id=data.get("category_id"),
+        name=data.get("name"),
+        users=data.get("users"),
+        customers=data.get("customers"),
+        AVP=data.get("AVP"),
+        APC=data.get("APC"),
+        TMS=data.get("TMS"),
+        COGS=data.get("COGS"),
+        COGS1s=data.get("COGS1s"),
+        FC=int(fc),
+        post_id=data.get("post_id")
     )
-    if not post_data:
-        await message.answer("Извините, ошибка при обновлении поста", reply_markup= await get_catalogue(telegram_id = message.from_user.id))
-        return
-    await message.answer("Пост успешно обновлен")
-    message_text = (
-        f"📝 **Информация о товаре:**\n\n"
-        f"**Название:** `{post_data.get('title')}`\n\n"
-        f"**Описание:** `{post_data.get('description')}`\n\n"
-        f"**Прайс:** `{post_data.get('price')}`\n\n"
-        f"**Страна:** `{post_data.get('country')}`\n\n"
-        f"**Вес:** `{post_data.get('weight')}`\n\n"
-    )
-    await message.answer(message_text, reply_markup=await inline_keyboards.get_post_menu(category_id=data.get("category"), post_id=data.get("post_id")), parse_mode="MarkdownV2")
-    await state.clear()
 
+    if not unit_data:
+        await message.answer("Ошибка при обновлении модели", reply_markup=await get_catalogue(telegram_id=message.from_user.id))
+        return
+
+    await message.answer("Модель успешно обновлена")
+    message_text = (
+        f"🔧 **Обновлённая модель:**\n\n"
+        f"**Название:** `{unit_data.get('name')}`\n"
+        f"**Users:** `{unit_data.get('users')}`\n"
+        f"**Customers:** `{unit_data.get('customers')}`\n"
+        f"**AVP:** `{unit_data.get('AVP')}`\n"
+        f"**APC:** `{unit_data.get('APC')}`\n"
+        f"**TMS:** `{unit_data.get('TMS')}`\n"
+        f"**COGS:** `{unit_data.get('COGS')}`\n"
+        f"**COGS1s:** `{unit_data.get('COGS1s')}`\n"
+        f"**FC:** `{unit_data.get('FC')}`"
+    )
+
+    await message.answer(
+        message_text,
+        reply_markup=await inline_keyboards.get_post_menu(
+            category_id=data.get("category_id"),
+            post_id=data.get("post_id")
+        ),
+        parse_mode="MarkdownV2"
+    )
+    await state.clear()
 #===========================================================================================================================
 # Удаление сета   
 #===========================================================================================================================

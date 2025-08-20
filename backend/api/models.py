@@ -14,8 +14,8 @@ class ModelSet(models.Model):
 
 
 class UnitModel(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="single_combination")
-    model_set = models.ForeignKey(ModelSet, on_delete=models.CASCADE, related_name="single_combination")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sets")
+    model_set = models.ForeignKey(ModelSet, on_delete=models.CASCADE, related_name='units')
     name = models.CharField(blank=True, max_length=200, default="")
     users = models.IntegerField(blank=False, null=False, default=0)
     customers = models.IntegerField(blank=False, null=False, default=0)
@@ -28,7 +28,7 @@ class UnitModel(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
+    
     class Meta:
         verbose_name = 'модель юнит-экономики'
         verbose_name_plural = 'модели юнит-экономики'

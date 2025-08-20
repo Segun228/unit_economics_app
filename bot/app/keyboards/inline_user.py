@@ -81,7 +81,7 @@ async def get_posts(posts, category):
         keyboard.add(InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu"))
         return keyboard.adjust(1).as_markup()
     for post in posts:
-        keyboard.add(InlineKeyboardButton(text=f"{post.get('title', 'Прекрасное растение')}", callback_data=f"post_{category_id}_{post.get('id')}"))
+        keyboard.add(InlineKeyboardButton(text=f"{post.get('name', 'Модель экономики')}", callback_data=f"post_{category_id}_{post.get('id')}"))
     keyboard.add(InlineKeyboardButton(text="Редактировать категорию ✏️", callback_data=f"edit_category_{category_id}"))
     keyboard.add(InlineKeyboardButton(text="Удалить категорию ❌", callback_data=f"delete_category_{category_id}"))
     keyboard.add(InlineKeyboardButton(text="Создать пост ➕", callback_data=f"create_post_{category_id}"))
@@ -92,7 +92,6 @@ async def get_posts(posts, category):
 
 async def get_post_menu(category_id, post_id):
     keyboard = InlineKeyboardBuilder()
-    keyboard.add(InlineKeyboardButton(text="Добавить фото 📸", callback_data=f"add_photo_{post_id}"))
     keyboard.add(InlineKeyboardButton(text="Редактировать пост 📝", callback_data=f"edit_post_{category_id}_{post_id}"))
     keyboard.add(InlineKeyboardButton(text="Удалить пост 🗑️", callback_data=f"delete_post_{category_id}_{post_id}"))
     keyboard.add(InlineKeyboardButton(text="Каталог 📦", callback_data="catalogue"))
