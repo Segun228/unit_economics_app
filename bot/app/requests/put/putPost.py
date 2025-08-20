@@ -6,7 +6,20 @@ from dotenv import load_dotenv
 from pprint import pprint
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-async def put_post(telegram_id, category_id, title, description, price, quantity, post_id):
+async def put_post( 
+        telegram_id, 
+        category_id,
+        post_id,
+        name,
+        users,
+        customers,
+        AVP,
+        APC,
+        TMS,
+        COGS,
+        COGS1s,
+        FC
+    ):
     load_dotenv()
     base_url = os.getenv("BASE_URL")
 
@@ -21,14 +34,18 @@ async def put_post(telegram_id, category_id, title, description, price, quantity
         headers = {
             "Authorization": f"Bot {telegram_id}",
         }
-        exact_url = f"{base_url}api/categories/{category_id}/posts/{post_id}/" 
+        exact_url = f"{base_url}api/sets/{category_id}/units/{post_id}/" 
         logging.debug(f"Sending to {exact_url}")
         data = {
-            "category": category_id,
-            "title": title,
-            "description": description,
-            "price": price,
-            "quantity": quantity,
+            "users": users,
+            "customers":customers,
+            "AVP":AVP,
+            "APC":APC,
+            "TMS":TMS,
+            "COGS":COGS,
+            "COGS1s":COGS1s,
+            "FC":FC,
+            "name":name,
         }
         async with session.put(
             exact_url, 
@@ -44,8 +61,21 @@ async def put_post(telegram_id, category_id, title, description, price, quantity
 
 async def main():
     try:
-        response_data = await put_post(telegram_id=6911237041, category_id=1, title="Запостил", description="шото", price=100, quantity=10, post_id=1)
-        pprint(response_data)
+        response_data = await put_post( 
+            telegram_id = 777, 
+            category_id=1,
+            post_id = 1,
+            name= "new",
+            users = 1000,
+            customers = 10,
+            AVP = 100,
+            APC = 1,
+            TMS = 100,
+            COGS = 100,
+            COGS1s = 100,
+            FC =200
+        )
+        print(response_data)
     except ValueError:
         print("Пожалуйста, введите корректный числовой ID.")
 

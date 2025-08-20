@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from pprint import pprint
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-async def post_category(telegram_id, title, description=""):
+async def post_set(telegram_id, name, description=""):
     load_dotenv()
     base_url = os.getenv("BASE_URL")
 
@@ -21,10 +21,10 @@ async def post_category(telegram_id, title, description=""):
         headers = {
             "Authorization": f"Bot {telegram_id}",
         }
-        exact_url = f"{base_url}api/categories/" 
+        exact_url = f"{base_url}api/sets/" 
         logging.debug(f"Sending to {exact_url}")
         data = {
-            "name": title,
+            "name": name,
             "description": description,
         }
         async with session.post(
@@ -41,7 +41,7 @@ async def post_category(telegram_id, title, description=""):
 
 async def main():
     try:
-        response_data = await post_category(telegram_id=6911237041, title="Запостил", description="шото")
+        response_data = await post_set(telegram_id=6911237041, name="Запостил", description="шото")
         pprint(response_data)
     except ValueError:
         print("Пожалуйста, введите корректный числовой ID.")

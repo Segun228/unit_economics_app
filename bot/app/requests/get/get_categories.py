@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from pprint import pprint
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-async def get_categories(telegram_id):
+async def get_sets(telegram_id):
     load_dotenv()
     base_url = os.getenv("BASE_URL")
 
@@ -21,7 +21,7 @@ async def get_categories(telegram_id):
         headers = {
             "Authorization": f"Bot {telegram_id}",
         }
-        exact_url = f"{base_url}api/categories/" 
+        exact_url = f"{base_url}api/sets/" 
         logging.debug(f"Sending to {exact_url}")
         
         async with session.get(
@@ -38,7 +38,7 @@ async def get_categories(telegram_id):
 async def main():
     try:
         delete_id = int(input("Введите ID пользователя: "))
-        response_data = await get_categories(telegram_id=delete_id)
+        response_data = await get_sets(telegram_id=delete_id)
         pprint(response_data)
     except ValueError:
         print("Пожалуйста, введите корректный числовой ID.")

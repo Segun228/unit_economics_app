@@ -3,28 +3,31 @@ from aiogram.types import Message
 from dotenv import load_dotenv
 import logging
 import os
-
+from typing import Union
+from aiogram.types import CallbackQuery
 
 
 load_dotenv()
 
+admins_string = os.getenv("ADMINS")
+if not admins_string:
+    raise ValueError("empty admin list given")
 
-def parse_admin_id(env_name: str):
-    value = os.getenv(env_name, "").strip()
-    if value.isdigit():
-        return int(value)
-    return None
-
-
-ADMIN_IDS = list(filter(None, [
-    parse_admin_id("ADMIN_1"),
-    parse_admin_id("ADMIN_2"),
-]))
-
+admins = {int(x.strip()) for x in admins_string.split("_") if x.strip().isdigit()}
 
 
 class IsAdmin(BaseFilter):
-    async def __call__(self, message: Message) -> bool:
-        user_id = message.from_user.id
-        is_admin = user_id in ADMIN_IDS
+    async def __call__(self, obj: Union[Message, CallbackQuery]) -> bool:
+        user_id = getattr(obj.from_user, "id", None)
+        is_admin = user_id in admins
+        logging.error(f"IsAdmin check for user_id={user_id}: {is_admin}")
         return is_admin
+
+
+def get_admin_id():
+
+    admins_string = os.getenv("ADMINS")
+    if not admins_string:
+        raise ValueError("empty admin list given")
+
+    return {int(x.strip()) for x in admins_string.split("_") if x.strip().isdigit()}

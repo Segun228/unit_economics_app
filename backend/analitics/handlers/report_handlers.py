@@ -2,6 +2,7 @@ from typing import Dict, List
 import pandas as pd
 import logging
 from pprint import pprint
+from django.http.response import HttpResponseBadRequest
 '''
 given fields
 data = {
@@ -99,6 +100,35 @@ def process_dataframe(df:pd.DataFrame):
         return None
 
 
+def set_calculate_economics(data):
+    calculated_units = []
+    errors = []
+
+    try:
+        units = data.get("units") # TODO пофиксить название поля
+        if units is None or not isinstance(units, list):
+            raise ValueError("Empty or invalid 'units' list")
+
+        for i, unit in enumerate(units, start=1):
+            try:
+                result = unit_calculate_economics(unit)
+                if result:
+                    calculated_units.append(result)
+                else:
+                    errors.append({"index": i, "error": "Calculation returned None"})
+            except Exception as e:
+                logging.warning(f"Ошибка при расчёте unit[{i}]: {e}")
+                errors.append({"index": i, "error": str(e)})
+
+        return {
+            "success": True,
+            "calculated": calculated_units,
+            "errors": errors,
+        }
+
+    except Exception as e:
+        logging.error(f"Ошибка в set_calculate_economics: {e}")
+        return None
 
 
 if __name__ == "__main__":

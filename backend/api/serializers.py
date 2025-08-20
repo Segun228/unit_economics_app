@@ -10,7 +10,7 @@ class UnitModelSerializer(serializers.ModelSerializer):
             'user',
             'model_set',
             'users',
-            "name"
+            "name",
             'customers',
             'AVP',
             'APC',
@@ -21,7 +21,7 @@ class UnitModelSerializer(serializers.ModelSerializer):
             'updated_at',
             'FC'
         ]
-        read_only_fields = ['id', 'user', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'user', 'created_at', 'updated_at', 'model_set']
 
 
 class ModelSetSerializer(serializers.ModelSerializer):

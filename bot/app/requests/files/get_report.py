@@ -2,11 +2,14 @@ import aiohttp
 import asyncio
 import os
 import logging
+from io import BytesIO
 from dotenv import load_dotenv
 from pprint import pprint
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-async def post_photos(telegram_id, post_id, photos):
+
+
+async def get_report(telegram_id):
     load_dotenv()
     base_url = os.getenv("BASE_URL")
 
@@ -21,30 +24,18 @@ async def post_photos(telegram_id, post_id, photos):
         headers = {
             "Authorization": f"Bot {telegram_id}",
         }
-        exact_url = f"{base_url}photos/{post_id}/" 
+        exact_url = f"{base_url}analitics/file/upload/" 
         logging.debug(f"Sending to {exact_url}")
-        data = {
-            "photos" : photos
-        }
-        async with session.patch(
+        async with session.get(
             exact_url, 
             headers=headers,
-            data = data
         ) as response:
             if response.status in (200, 201, 202, 203):
-                logging.info("категории получены")
-                return await response.json()
+                logging.info("Report received")
+                data = await response.read()
+                file_like = BytesIO(data)
+                file_like.name = "report.xlsx" 
+                return file_like
             else:
                 return None
 
-
-async def main():
-    try:
-        response_data = await post_photos(telegram_id=6911237041, title="Запостил", description="шото")
-        pprint(response_data)
-    except ValueError:
-        print("Пожалуйста, введите корректный числовой ID.")
-
-
-if __name__ == "__main__":
-    asyncio.run(main())

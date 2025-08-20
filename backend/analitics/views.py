@@ -207,6 +207,14 @@ class FileUploadView(ListCreateAPIView):
     authentication_classes = [TelegramAuthentication]
     permission_classes = [IsAuthenticated]
 
+    def get(self, request, *args, **kwargs):
+        units = UnitModel.objects.filter(user = request.user).values()
+        sets = ModelSet.objects.filter(user = request.user).values()
+        return handlers.get_xlsx_report(
+            units = units,
+            sets = sets
+        )
+
     def post(self, request, *args, **kwargs):
         excel_file = request.FILES.get("file")
         if not excel_file:

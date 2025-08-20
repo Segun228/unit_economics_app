@@ -21,7 +21,7 @@ async def get_post(telegram_id, post_id, category_id):
         headers = {
             "Authorization": f"Bot {telegram_id}",
         }
-        exact_url = f"{base_url}api/categories/{category_id}/posts/{post_id}/" 
+        exact_url = f"{base_url}api/sets/{category_id}/units/{post_id}/" 
         logging.debug(f"Sending to {exact_url}")
         
         async with session.get(
