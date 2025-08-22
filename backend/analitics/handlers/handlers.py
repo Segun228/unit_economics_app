@@ -12,24 +12,23 @@ from rest_framework.exceptions import bad_request
 from django.http import HttpResponseBadRequest
 
 
-def add_posts_file(data, request=None, given_name="", description=""):
+def add_posts_file(data, request=None, name="New set via XLSX", description=""):
     df = pd.read_excel(data)
-    name = given_name or getattr(data, "name", None) or "New unit set"
     units = df.to_dict(orient="records")
     errors = []
 
-    creator = getattr(request, 'user', None)
+    user = getattr(request, 'user')
 
     new_set = ModelSet.objects.create(
         name=name,
         description=description,
-        creator=creator
+        user=user
     )
 
     for i, unit in enumerate(units, start=1):
         try:
             UnitModel.objects.create(
-                name=unit.get("name", ""),
+                name=unit.get("unit name", ""),
                 users=unit.get("users", ""),
                 model_set=new_set,
                 customers=unit.get("customers", ""),
@@ -39,6 +38,7 @@ def add_posts_file(data, request=None, given_name="", description=""):
                 COGS=unit.get("COGS", ""),
                 COGS1s=unit.get("COGS1s", ""),
                 FC=unit.get("FC", ""),
+                user=user
             )
         except Exception as e:
             logging.error(f"Ошибка в строке {i}: {e}")
@@ -57,7 +57,7 @@ def get_xlsx_report(units, sets):
     if not units or not sets:
         return HttpResponseBadRequest("Нет данных для отчета")
     units_df = pd.DataFrame(units)[[
-        "model_set",
+        "model_set_id",
         "name",
         "users",
         "customers",
@@ -72,11 +72,12 @@ def get_xlsx_report(units, sets):
     result = pd.merge(
         left=units_df,
         right=sets_df,
-        left_on="model_set",
+        left_on="model_set_id",
         right_on="id",
         how="inner",
         suffixes=("_unit", "_set")
-    )
+    )[["name_set", "description",	"name_unit", "users", "customers", "AVP", "APC", "TMS", "COGS", "COGS1s", "FC"]]
+    result.columns = ["set name", "description",	"unit name", "users", "customers", "AVP", "APC", "TMS", "COGS", "COGS1s", "FC"]
     buffer = BytesIO()
     with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
         result.to_excel(

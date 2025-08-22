@@ -1,6 +1,4 @@
-from rest_framework.generics import (
-    ListCreateAPIView, RetrieveUpdateDestroyAPIView
-)
+
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from django.http import HttpResponseBadRequest, JsonResponse
@@ -21,25 +19,33 @@ from rest_framework.response import Response
 
 from .permissions import IsAdminCustom
 
-from .handlers import handlers
+from .handlers import handlers, report_handlers
 
+from rest_framework.views import APIView
 
 
 # ───────────────────────────────────────────────
 # 🔤 TEXT REPORTS
 # ───────────────────────────────────────────────
 
-class UnitTextReportView(ListCreateAPIView):
+class AuthView(APIView):
+    authentication_classes = [TelegramAuthentication]
+    permission_classes = [IsAuthenticated]
+
+class UnitTextReportView(AuthView, APIView):
     def post(self, request, *args, **kwargs):
         unit_id = kwargs.get("unit_id")
+        print("unit_id:", unit_id)
         try:
-            unit = UnitModel.objects.get(pk=unit_id)
+            unit = UnitModel.objects.get(pk=unit_id, user=request.user)
         except UnitModel.DoesNotExist:
             return Response({"error": "Unit not found"}, status=404)
         data = UnitModelSerializer(unit).data
+        result = report_handlers.unit_calculate_economics(data = data)
+        return Response(result)
 
 
-class SetTextReportView(ListCreateAPIView):
+class SetTextReportView(AuthView, APIView):
     def post(self, request, *args, **kwargs):
         set_id = kwargs.get("set_id")
         try:
@@ -53,9 +59,9 @@ class SetTextReportView(ListCreateAPIView):
 # 📄 EXCEL REPORTS
 # ───────────────────────────────────────────────
 
-class UnitExelReportView(ListCreateAPIView):
+class UnitExelReportView(AuthView, APIView):
     def post(self, request, *args, **kwargs):
-        unit_id = kwargs.get("unit_id")
+        unit_id = int(kwargs.get("unit_id"))
         try:
             unit = UnitModel.objects.get(pk=unit_id)
         except UnitModel.DoesNotExist:
@@ -63,7 +69,7 @@ class UnitExelReportView(ListCreateAPIView):
         data = UnitModelSerializer(unit).data
 
 
-class SetExelReportView(ListCreateAPIView):
+class SetExelReportView(AuthView, APIView):
     def post(self, request, *args, **kwargs):
         set_id = kwargs.get("set_id")
         try:
@@ -77,7 +83,7 @@ class SetExelReportView(ListCreateAPIView):
 # 🖼️ IMAGE REPORTS
 # ───────────────────────────────────────────────
 
-class UnitImageReportView(ListCreateAPIView):
+class UnitImageReportView(AuthView, APIView):
     def post(self, request, *args, **kwargs):
         unit_id = kwargs.get("unit_id")
         try:
@@ -87,7 +93,7 @@ class UnitImageReportView(ListCreateAPIView):
         data = UnitModelSerializer(unit).data
 
 
-class SetImageReportView(ListCreateAPIView):
+class SetImageReportView(AuthView, APIView):
     def post(self, request, *args, **kwargs):
         set_id = kwargs.get("set_id")
         try:
@@ -101,7 +107,7 @@ class SetImageReportView(ListCreateAPIView):
 # 📊 UNIT KPI BASIC CALCULATIONS (BEP, RI, EP)
 # ───────────────────────────────────────────────
 
-class UnitCountBEPView(ListCreateAPIView):
+class UnitCountBEPView(AuthView, APIView):
     def post(self, request, *args, **kwargs):
         unit_id = kwargs.get("unit_id")
         try:
@@ -111,7 +117,7 @@ class UnitCountBEPView(ListCreateAPIView):
         data = UnitModelSerializer(unit).data
 
 
-class UnitCountRIView(ListCreateAPIView):
+class UnitCountRIView(AuthView, APIView):
     def post(self, request, *args, **kwargs):
         unit_id = kwargs.get("unit_id")
         try:
@@ -121,7 +127,7 @@ class UnitCountRIView(ListCreateAPIView):
         data = UnitModelSerializer(unit).data
 
 
-class UnitCountEPView(ListCreateAPIView):
+class UnitCountEPView(AuthView, APIView):
     def post(self, request, *args, **kwargs):
         unit_id = kwargs.get("unit_id")
         try:
@@ -135,7 +141,7 @@ class UnitCountEPView(ListCreateAPIView):
 # 📊 SET KPI BASIC CALCULATIONS (BEP, RI, EP)
 # ───────────────────────────────────────────────
 
-class SetCountBEPView(ListCreateAPIView):
+class SetCountBEPView(AuthView, APIView):
     def post(self, request, *args, **kwargs):
         set_id = kwargs.get("set_id")
         try:
@@ -145,7 +151,7 @@ class SetCountBEPView(ListCreateAPIView):
         data = UnitModelSerializer(set).data
 
 
-class SetCountRIView(ListCreateAPIView):
+class SetCountRIView(AuthView, APIView):
     def post(self, request, *args, **kwargs):
         set_id = kwargs.get("set_id")
         try:
@@ -155,7 +161,7 @@ class SetCountRIView(ListCreateAPIView):
         data = UnitModelSerializer(set).data
 
 
-class SetCountEPView(ListCreateAPIView):
+class SetCountEPView(AuthView, APIView):
     def post(self, request, *args, **kwargs):
         set_id = kwargs.get("set_id")
         try:
@@ -169,7 +175,7 @@ class SetCountEPView(ListCreateAPIView):
 # 📈 KPI EXTENDED: UNIT-LEVEL METRICS (KPI по каждому юниту)
 # ───────────────────────────────────────────────
 
-class UnitKPICountBEPView(ListCreateAPIView):
+class UnitKPICountBEPView(AuthView, APIView):
     def post(self, request, *args, **kwargs):
         unit_id = kwargs.get("unit_id")
         try:
@@ -179,7 +185,7 @@ class UnitKPICountBEPView(ListCreateAPIView):
         data = UnitModelSerializer(unit).data
 
 
-class UnitKPICountRIView(ListCreateAPIView):
+class UnitKPICountRIView(AuthView, APIView):
     def post(self, request, *args, **kwargs):
         unit_id = kwargs.get("unit_id")
         try:
@@ -189,7 +195,7 @@ class UnitKPICountRIView(ListCreateAPIView):
         data = UnitModelSerializer(unit).data
 
 
-class UnitKPICountEPView(ListCreateAPIView):
+class UnitKPICountEPView(AuthView, APIView):
     def post(self, request, *args, **kwargs):
         unit_id = kwargs.get("unit_id")
         try:
@@ -203,7 +209,7 @@ class UnitKPICountEPView(ListCreateAPIView):
 # 📤 FILE UPLOAD
 # ───────────────────────────────────────────────
 
-class FileUploadView(ListCreateAPIView):
+class FileUploadView(AuthView, APIView):
     authentication_classes = [TelegramAuthentication]
     permission_classes = [IsAuthenticated]
 
@@ -217,9 +223,10 @@ class FileUploadView(ListCreateAPIView):
 
     def post(self, request, *args, **kwargs):
         excel_file = request.FILES.get("file")
+        name = request.data.get("name", "New set via XLSX")
         if not excel_file:
             return Response({"error": "Файл не передан"}, status=400)
-        result = handlers.add_posts_file(data = excel_file, request= request)
+        result = handlers.add_posts_file(data = excel_file, request= request, name = name)
         if not result:
             return HttpResponseBadRequest()
         if result['errors']:
@@ -241,7 +248,7 @@ class FileUploadView(ListCreateAPIView):
 # 📥 GET FULL XLSX EXPORT FROM DB
 # ───────────────────────────────────────────────
 
-class GetFileDatabase(ListCreateAPIView):
+class GetFileDatabase(AuthView, APIView):
     authentication_classes = [TelegramAuthentication]
     permission_classes = [IsAuthenticated]
 

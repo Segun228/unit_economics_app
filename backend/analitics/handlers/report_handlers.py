@@ -1,5 +1,8 @@
 from typing import Dict, List
 import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib as mplb
 import logging
 from pprint import pprint
 from django.http.response import HttpResponseBadRequest
@@ -21,6 +24,9 @@ data = {
 '''
 
 def unit_calculate_economics(data):
+    """
+    обработка данных юнита для создания отчета
+    """
     try:
         df = pd.DataFrame([data])
         df["Unit"] = "User"
@@ -42,7 +48,6 @@ def unit_calculate_economics(data):
         df["Gross_profit"] = df["CLTV"] * df["customers"]
         df["Margin"] = df["Gross_profit"] - df["TMS"]
 
-
         def calculate_required_bep(row: pd.Series):
             ucm = row.get("UCM", 0)
             if ucm > 0:
@@ -53,6 +58,13 @@ def unit_calculate_economics(data):
 
         df["BEP"] = df["Required_units_to_BEP"] * df["UCM"]
         df["Profit"] = df["Margin"] - df["FC"]
+
+        float_cols = df.select_dtypes(include='float').columns
+        df[float_cols] = df[float_cols].round(3)
+
+        df.replace([np.inf, -np.inf, np.nan], 0, inplace=True)
+        df = df.where(pd.notnull(df), None)
+
 
         return df.to_dict(orient="records")
     except Exception as e:
@@ -93,6 +105,13 @@ def process_dataframe(df:pd.DataFrame):
         
         df["BEP"] = df["Required_units_to_BEP"] * df["UCM"]
         df["Profit"] = df["Margin"] - df["FC"]
+
+        float_cols = df.select_dtypes(include='float').columns
+        df[float_cols] = df[float_cols].round(3)
+
+        df.replace([np.inf, -np.inf], np.nan, inplace=True)
+        df = df.where(pd.notnull(df), None)
+
         return df
 
     except Exception as e:

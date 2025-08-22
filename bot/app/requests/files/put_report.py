@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-async def put_report(telegram_id, file_bytes: bytes):
+async def put_report(telegram_id, file_bytes: bytes, name=""):
     load_dotenv()
     base_url = os.getenv("BASE_URL")
     if not base_url:
@@ -20,6 +20,11 @@ async def put_report(telegram_id, file_bytes: bytes):
         value=file_bytes, 
         filename='report.xlsx',
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+
+    form.add_field(
+        name='name',
+        value=name
     )
 
     async with aiohttp.ClientSession() as session:

@@ -25,7 +25,5 @@ class ThrottlingMiddleware(BaseMiddleware):
             return 
         
         self.user_timestamps[user_id] = now
-    
-        print("This is after filter!", event.text)
 
         return await handler(event, data)

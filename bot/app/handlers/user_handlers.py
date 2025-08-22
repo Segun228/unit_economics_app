@@ -112,7 +112,6 @@ async def category_catalogue_callback_admin(callback: CallbackQuery):
     await callback.answer()
     category_id = callback.data.split("_")[1]
     categories = await get_sets(telegram_id=callback.from_user.id)
-    print(category_id)
     current_category = None
     if categories is not None:
         for category in categories:
@@ -637,6 +636,7 @@ async def send_report_admin(callback: CallbackQuery, state: FSMContext, bot: Bot
 
 @router.callback_query(F.data == "add_posts")
 async def file_add_posts_admin(callback: CallbackQuery, state: FSMContext, bot:Bot):
+    
     await callback.message.answer(
         "Это текущие позиции"
     )
@@ -646,20 +646,28 @@ async def file_add_posts_admin(callback: CallbackQuery, state: FSMContext, bot:B
         document=BufferedInputFile(docs.getvalue(), filename="report.xlsx"),
     )
     await callback.message.answer(
-        "Вы в режиме добавления позиций. Отправте в чат файл с позициями, которые хотите добавить, в том же формате"
+        "Вы в режиме добавления позиций. Автоматически будет создан новый набор. Отправте в чат файл с позициями, которые хотите добавить, в таком формате"
     )
-    await state.set_state(File.waiting_for_file)
+    await callback.message.answer(
+        "Введите имя новой категории"
+    )
+    await state.set_state(File.waiting_for_name)
 
+@router.message(File.waiting_for_name)
+async def upload_file_admin(message: Message, state: FSMContext, bot: Bot):
+    name = message.text
+    await state.update_data(name = name)
+    await state.set_state(File.waiting_for_file)
+    await message.answer("Отправте боту файл")
 
 @router.message(File.waiting_for_file)
 async def upload_add_file_admin(message: Message, state: FSMContext, bot: Bot):
     try:
-
         file = await bot.get_file(message.document.file_id)
+        data = await state.get_data()
+        name = data.get("name", "New set")
         file_bytes = await bot.download_file(file.file_path)
-        response = await put_report(message.from_user.id, file_bytes)
-
-
+        response = await put_report(message.from_user.id, file_bytes, name=name)
         if not response:
             await message.answer(
                 "К сожалению, не удалось обработать файл. Убедитесь, что формат файла соответствует установленному."
@@ -675,38 +683,81 @@ async def upload_add_file_admin(message: Message, state: FSMContext, bot: Bot):
         await message.answer("Не удалось обработать файл. Убедитесь, что это корректный Excel (.xlsx).", reply_markup= inline_keyboards.file_panel)
 
 
-@router.callback_query(F.data == "replace_posts")
-async def file_replace_posts_admin(callback: CallbackQuery, state: FSMContext, bot:Bot):
-    await callback.message.answer(
-        "Это текущие позиции"
-    )
-    docs = await get_report(telegram_id=callback.from_user.id)
-    await bot.send_document(
-        chat_id=callback.message.chat.id,
-        document=BufferedInputFile(docs.getvalue(), filename="report.xlsx"),
-    )
-    await callback.message.answer(
-        "Вы в режиме полного обновления позиций. Отправте в чат файл с позициями, которые хотите добавить, в том же формате. Будте внимательны, текущие позиции будут удалены"
-    )
-    await state.set_state(File.waiting_for_replace_file)
 
 
-@router.message(File.waiting_for_replace_file)
-async def upload_replace_file_admin(message: Message, state: FSMContext, bot: Bot):
+#==============================================================================================================================================================================================
+# Set analysis
+#==============================================================================================================================================================================================
+
+@router.callback_query(F.data.startswith("analise_set"))
+async def analyse_set_menu(callback: CallbackQuery, state: FSMContext, bot:Bot):
     try:
-        file = await bot.get_file(message.document.file_id)
-        file_bytes = await bot.download_file(file.file_path)
-        response = await replace_report(message.from_user.id, file_bytes)
-        if not response:
-            await message.answer(
-                "К сожалению, не удалось обработать файл. Убедитесь, что формат файла соответствует установленному."
-            )
-            await state.clear()
-            return
-        await message.answer("Файл успешно получен и обработан! Позиции обновлены", reply_markup= inline_keyboards.file_panel)
-        await state.clear()
-
+        set_id = callback.data.split("_")[2]
+        await callback.message.answer(
+            "Меню аналитики текущего набора моделей",
+            reply_markup = await inline_keyboards.create_set_edit_menu(set_id)
+        )
     except Exception as e:
-        logging.error(f"Ошибка при обработке Excel: {e}")
-        await state.clear()
-        await message.answer("Не удалось обработать файл. Убедитесь, что это корректный Excel (.xlsx).", reply_markup= inline_keyboards.file_panel)
+        logging.error(e)
+        await callback.message.answer("Не удалось загрузить аналитический интерфейс, извините", reply_markup=inline_keyboards.main)
+
+
+#==============================================================================================================================================================================================
+# Unit analysis
+#==============================================================================================================================================================================================
+
+
+@router.callback_query(F.data.startswith("analise_unit"))
+async def analyse_set_menu(callback: CallbackQuery, state: FSMContext, bot:Bot):
+    try:
+        set_id, unit_id = callback.data.split("_")[2]
+        await callback.message.answer(
+            "Меню аналитики текущей модели",
+            reply_markup= await inline_keyboards.create_unit_edit_menu(set_id, unit_id)
+        )
+    except Exception as e:
+        logging.error(e)
+        await callback.message.answer("Не удалось загрузить аналитический интерфейс, извините", reply_markup= inline_keyboards.main)
+
+
+#===========================================================================================================================
+# Заглушка
+#===========================================================================================================================
+
+@router.message()
+async def all_other_messages(message: Message):
+    await message.answer("Неизвестная команда 🧐")
+    photo_data = await get_cat_error_async()
+    if photo_data:
+        photo_to_send = BufferedInputFile(photo_data, filename="cat_error.jpg")
+        await message.bot.send_photo(chat_id=message.chat.id, photo=photo_to_send)
+
+
+async def send_post_photos(callback: CallbackQuery, post: Dict[str, Any]):
+    photo_ids = post.get('photos', [])
+
+    if not photo_ids:
+        await callback.message.answer("К сожалению, у этой позиции нет фотографий. 🖼️")
+        return
+
+    first_photo_id = photo_ids[0]
+    caption_text = f"**{post.get('title', 'Без названия')}**"
+    
+    await callback.message.answer_photo(
+        photo=first_photo_id,
+        caption=caption_text,
+        parse_mode="MarkdownV2"
+    )
+
+    for photo_id in photo_ids[1:]:
+        await callback.message.answer_photo(photo=photo_id)
+
+
+#===========================================================================================================================
+# Отлов неизвестных обработчиков
+#===========================================================================================================================
+
+@router.callback_query()
+async def unknown_callback(callback: CallbackQuery):
+    logging.info(f"UNHANDLED CALLBACK: {callback.data}")
+    await callback.answer(f"⚠️ Это действие не распознано. Получено: {callback.data}", show_alert=True)

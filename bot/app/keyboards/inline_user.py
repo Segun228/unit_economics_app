@@ -51,7 +51,7 @@ catalogue = InlineKeyboardMarkup(
 
 no_posts = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text=" Создать пост ✍️", callback_data="catalogue")],
+        [InlineKeyboardButton(text=" Создать модель ✍️", callback_data="catalogue")],
         [InlineKeyboardButton(text=" Каталог 📖", callback_data="catalogue")],
         [InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")],
     ]
@@ -65,7 +65,7 @@ async def get_catalogue(telegram_id, categories = None):
     if categories and categories is not None:
         for category in categories:
             keyboard.add(InlineKeyboardButton(text=f"{category.get('name')}", callback_data=f"category_{category.get('id')}"))
-    keyboard.add(InlineKeyboardButton(text="Создать категорию ✨", callback_data="create_category"))
+    keyboard.add(InlineKeyboardButton(text="Создать набор ✨", callback_data="create_category"))
     keyboard.add(InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu"))
     return keyboard.adjust(1).as_markup()
 
@@ -75,16 +75,17 @@ async def get_posts(posts, category):
     category_id = category.get("id", 0)
     if posts is None or posts == [] or posts == ():
         keyboard.add(InlineKeyboardButton(text="Каталог 📚", callback_data="catalogue"))
-        keyboard.add(InlineKeyboardButton(text="Редактировать категорию ✏️", callback_data=f"edit_category_{category_id}"))
-        keyboard.add(InlineKeyboardButton(text="Удалить категорию ❌", callback_data=f"delete_category_{category_id}"))
-        keyboard.add(InlineKeyboardButton(text="Создать пост ➕", callback_data=f"create_post_{category_id}"))
+        keyboard.add(InlineKeyboardButton(text="Редактировать набор ✏️", callback_data=f"edit_category_{category_id}"))
+        keyboard.add(InlineKeyboardButton(text="Удалить набор ❌", callback_data=f"delete_category_{category_id}"))
+        keyboard.add(InlineKeyboardButton(text="Создать модель ➕", callback_data=f"create_post_{category_id}"))
         keyboard.add(InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu"))
         return keyboard.adjust(1).as_markup()
     for post in posts:
         keyboard.add(InlineKeyboardButton(text=f"{post.get('name', 'Модель экономики')}", callback_data=f"post_{category_id}_{post.get('id')}"))
-    keyboard.add(InlineKeyboardButton(text="Редактировать категорию ✏️", callback_data=f"edit_category_{category_id}"))
-    keyboard.add(InlineKeyboardButton(text="Удалить категорию ❌", callback_data=f"delete_category_{category_id}"))
-    keyboard.add(InlineKeyboardButton(text="Создать пост ➕", callback_data=f"create_post_{category_id}"))
+    keyboard.add(InlineKeyboardButton(text="Редактировать набор ✏️", callback_data=f"edit_category_{category_id}"))
+    keyboard.add(InlineKeyboardButton(text="Удалить набор ❌", callback_data=f"delete_category_{category_id}"))
+    keyboard.add(InlineKeyboardButton(text="Создать модель ➕", callback_data=f"create_post_{category_id}"))
+    keyboard.add(InlineKeyboardButton(text="Аналитика", callback_data=f"analize_set_{category_id}"))
     keyboard.add(InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu"))
     return keyboard.adjust(1).as_markup()
 
@@ -92,8 +93,9 @@ async def get_posts(posts, category):
 
 async def get_post_menu(category_id, post_id):
     keyboard = InlineKeyboardBuilder()
-    keyboard.add(InlineKeyboardButton(text="Редактировать пост 📝", callback_data=f"edit_post_{category_id}_{post_id}"))
-    keyboard.add(InlineKeyboardButton(text="Удалить пост 🗑️", callback_data=f"delete_post_{category_id}_{post_id}"))
+    keyboard.add(InlineKeyboardButton(text="Аналитика", callback_data=f"analise_unit_{category_id}"))
+    keyboard.add(InlineKeyboardButton(text="Редактировать модель 📝", callback_data=f"edit_post_{category_id}_{post_id}"))
+    keyboard.add(InlineKeyboardButton(text="Удалить модель 🗑️", callback_data=f"delete_post_{category_id}_{post_id}"))
     keyboard.add(InlineKeyboardButton(text="Каталог 📦", callback_data="catalogue"))
     keyboard.add(InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu"))
     return keyboard.adjust(1).as_markup()
@@ -109,9 +111,29 @@ async def give_acess(user_id):
 
 file_panel = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text="Получить отчет 📈", callback_data="get_report")],
-        [InlineKeyboardButton(text="Дополнить ассортимент 📝", callback_data="add_posts")],
-        [InlineKeyboardButton(text="Обновить ассортимент 🔄", callback_data="replace_posts")],
+        [InlineKeyboardButton(text="Получить отчет о моделях 📈", callback_data="get_report")],
+        [InlineKeyboardButton(text="Дополнить модели и наборы 📝", callback_data="add_posts")],
         [InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")],
     ]
 )
+
+
+
+async def create_set_edit_menu(set_id):
+    keyboard = InlineKeyboardBuilder()
+    keyboard.add(InlineKeyboardButton(text="Рассчитать экономику", callback_data=f"count_set_{set_id}"))
+    keyboard.add(InlineKeyboardButton(text="Построить визуализацию", callback_data=f"visualise_set_{set_id}"))
+    keyboard.add(InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu"))
+    return keyboard.adjust(1).as_markup()
+
+
+
+async def create_unit_edit_menu(set_id, unit_id):
+    keyboard = InlineKeyboardBuilder()
+    keyboard.add(InlineKeyboardButton(text="Рассчитать экономику", callback_data=f"count_unit_{set_id}_{unit_id}"))
+    keyboard.add(InlineKeyboardButton(text="Рассчитать точку безубыточности", callback_data=f"count_unit_{set_id}_{unit_id}"))
+    keyboard.add(InlineKeyboardButton(text="Рассчитать прибыль", callback_data=f"count_unit_{set_id}_{unit_id}"))
+    keyboard.add(InlineKeyboardButton(text="Рассчитать целевые метрики", callback_data=f"count_unit_{set_id}_{unit_id}"))
+    keyboard.add(InlineKeyboardButton(text="Построить визуализацию", callback_data=f"visualise_unit_{set_id}_{unit_id}"))
+    keyboard.add(InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu"))
+    return keyboard.adjust(1).as_markup()
