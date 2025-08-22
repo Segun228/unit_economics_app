@@ -2,7 +2,9 @@ from typing import Dict, List
 import pandas as pd
 import numpy as np
 import seaborn as sns
+
 import matplotlib as mplb
+
 import logging
 from pprint import pprint
 from django.http.response import HttpResponseBadRequest
@@ -60,11 +62,12 @@ def unit_calculate_economics(data):
         df["Profit"] = df["Margin"] - df["FC"]
 
         float_cols = df.select_dtypes(include='float').columns
-        df[float_cols] = df[float_cols].round(3)
+        df[float_cols] = df[float_cols].round(4)
 
         df.replace([np.inf, -np.inf, np.nan], 0, inplace=True)
-        df = df.where(pd.notnull(df), None)
-
+        df = df.infer_objects(copy=False)
+        df = df.where(pd.notnull(df), None)[["name", "users", "customers", "AVP", "APC", "TMS", "COGS",	"COGS1s", "FC",	"C1", "ARPC", "ARPU",	"CPA",	"CAC",	"CLTV",	"LTV",	"ROI",	"UCM",	"CCM",	"Revenue",	"Gross_profit",	"Margin",	"Required_units_to_BEP",	"BEP",	"Profit"]]
+        df.columns = ["name", "users", "customers", "AVP", "APC", "TMS", "COGS",	"COGS1s", "FC",	"C1", "ARPC", "ARPU",	"CPA",	"CAC",	"CLTV",	"LTV",	"ROI",	"UCM",	"CCM",	"Revenue",	"Gross_profit",	"Margin",	"Required_units_to_BEP",	"BEP",	"Profit"]
 
         return df.to_dict(orient="records")
     except Exception as e:
@@ -107,10 +110,14 @@ def process_dataframe(df:pd.DataFrame):
         df["Profit"] = df["Margin"] - df["FC"]
 
         float_cols = df.select_dtypes(include='float').columns
-        df[float_cols] = df[float_cols].round(3)
+        df[float_cols] = df[float_cols].round(4)
 
         df.replace([np.inf, -np.inf], np.nan, inplace=True)
+        df = df.infer_objects(copy=False)
         df = df.where(pd.notnull(df), None)
+
+        df = df.where(pd.notnull(df), None)[["name", "users", "customers", "AVP", "APC", "TMS", "COGS",	"COGS1s", "FC",	"C1", "ARPC", "ARPU",	"CPA",	"CAC",	"CLTV",	"LTV",	"ROI",	"UCM",	"CCM",	"Revenue",	"Gross_profit",	"Margin",	"Required_units_to_BEP",	"BEP",	"Profit"]]
+        df.columns = ["name", "users", "customers", "AVP", "APC", "TMS", "COGS",	"COGS1s", "FC",	"C1", "ARPC", "ARPU",	"CPA",	"CAC",	"CLTV",	"LTV",	"ROI",	"UCM",	"CCM",	"Revenue",	"Gross_profit",	"Margin",	"Required_units_to_BEP",	"BEP",	"Profit"]
 
         return df
 

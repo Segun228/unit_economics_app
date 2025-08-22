@@ -22,7 +22,7 @@ urlpatterns = [
     path('evaluate/set/<int:set_id>/expected_profit/', views.SetCountEPView.as_view(), name='evaluate_set_ep'),
 
     # ---------------- GET KPI ----------------
-    path('get_kpi/unit/<int:unit_id>/break_even_point/', views.UnitKPICountBEPView.as_view(), name='kpi_unit_bep'),
+    path('get_kpi/unit/<int:unit_id>/break_even_point/', views.UnitCountBEPView.as_view(), name='kpi_unit_bep'),
     path('get_kpi/unit/<int:unit_id>/required_investments/', views.UnitKPICountRIView.as_view(), name='kpi_unit_ri'),
     path('get_kpi/unit/<int:unit_id>/expected_profit/', views.UnitKPICountEPView.as_view(), name='kpi_unit_ep'),
 

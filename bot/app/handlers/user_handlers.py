@@ -1,5 +1,6 @@
 from app.handlers.router import admin_router as router
 import logging
+import re
 from aiogram.types import Message, CallbackQuery, BufferedInputFile
 from aiogram.filters import CommandStart, Command, StateFilter
 from aiogram import F
@@ -42,6 +43,7 @@ from app.requests.user.make_admin import make_admin
 from app.requests.files.get_report import get_report
 from app.requests.files.put_report import put_report
 
+from app.requests.units import get_unit_report, get_unit_bep, get_unit_exel
 #===========================================================================================================================
 # Конфигурация основных маршрутов
 #===========================================================================================================================
@@ -708,9 +710,10 @@ async def analyse_set_menu(callback: CallbackQuery, state: FSMContext, bot:Bot):
 
 
 @router.callback_query(F.data.startswith("analise_unit"))
-async def analyse_set_menu(callback: CallbackQuery, state: FSMContext, bot:Bot):
+async def analyse_unit_menu(callback: CallbackQuery, state: FSMContext, bot:Bot):
     try:
-        set_id, unit_id = callback.data.split("_")[2]
+        print(callback.data.split("_")[2:])
+        set_id, unit_id = callback.data.split("_")[2:]
         await callback.message.answer(
             "Меню аналитики текущей модели",
             reply_markup= await inline_keyboards.create_unit_edit_menu(set_id, unit_id)
@@ -719,6 +722,236 @@ async def analyse_set_menu(callback: CallbackQuery, state: FSMContext, bot:Bot):
         logging.error(e)
         await callback.message.answer("Не удалось загрузить аналитический интерфейс, извините", reply_markup= inline_keyboards.main)
 
+
+def escape_md_v2(text: str) -> str:
+    if text is None:
+        return ""
+    text = str(text)
+    escape_chars = r"_*[]()~`>#+-=|{}.!\\"
+    return re.sub(f"([{re.escape(escape_chars)}])", r'\\\1', text)
+
+def format_unit_report(data: dict) -> str:
+    get = lambda key: escape_md_v2(data.get(key))
+    return f"""
+📊 *Отчет по юнит\\-экономике*
+
+*Название:* `{get('name')}`
+*Пользователи:* `{get('users')}`
+*Клиенты:* `{get('customers')}`
+*AVP:* `{get('AVP')}`
+*APC:* `{get('APC')}`
+*TMS:* `{get('TMS')}`
+*COGS:* `{get('COGS')}`
+*COGS1s:* `{get('COGS1s')}`
+*FC:* `{get('FC')}`
+
+🔢 *Ключевые метрики:*
+\\- C1 \\(конверсия\\): {get("C1")}
+\\- ARPC \\(доход с клиента\\): {get("ARPC")}
+\\- ARPU \\(доход с пользователя\\): {get("ARPU")}
+\\- CPA \\(цена привлечения пользователя\\): {get("CPA")}
+\\- CAC \\(цена привлечения клиента\\): {get("CAC")}
+
+💰 *Доходность:*
+\\- CLTV \\(пожизненная ценность клиента\\): {get("CLTV")}
+\\- LTV \\(ценность клиента с учетом C1\\): {get("LTV")}
+\\- ROI: {get("ROI")} \\%
+\\- UCM \\(юнит\\-contrib\\-маржа\\): {get("UCM")}
+\\- CCM \\(клиент\\-contrib\\-маржа\\): {get("CCM")}
+
+📈 *Выручка и прибыль:*
+\\- Revenue \\(выручка\\): {get("Revenue")}
+\\- Gross Profit \\(валовая прибыль\\): {get("Gross_profit")}
+\\- Margin \\(маржа\\): {get("Margin")}
+\\- FC \\(постоянные издержки\\): {get("FC")}
+\\- Profit \\(прибыль\\): {get("Profit")}
+
+⚖️ *Окупаемость:*
+\\- Требуется юнитов до BEP: {get("Required_units_to_BEP")}
+\\- BEP \\(точка безубыточности\\): {get("BEP")}
+
+📌 *Прибыльна ли модель:* {"✅ Да" if data.get("Profitable") else "❌ Нет"}
+""".strip()
+
+
+def format_bep_report(data: dict) -> str:
+    get = lambda key: escape_md_v2(data.get(key, "Undefined"))
+    return f"""
+📊 *Отчет о точке безубыточности*
+
+💰 *Параметры модели экономики:*
+*Название:* `{get('name')}`
+*Пользователи:* `{get('users')}`
+*Клиенты:* `{get('customers')}`
+*AVP:* `{get('AVP')}`
+*APC:* `{get('APC')}`
+*TMS:* `{get('TMS')}`
+*COGS:* `{get('COGS')}`
+*COGS1s:* `{get('COGS1s')}`
+*FC:* `{get('FC')}`
+
+
+💰 *Параметры мат модели:*
+\\- CCM \\(клиент\\-contrib\\-маржа\\): {get("CCM")}
+\\- FC \\(постоянные издержки\\): {get("FC")}
+
+⚖️ *Окупаемость:*
+\\- Требуется юнитов до BEP: {get("Required_units_to_BEP")}
+\\- BEP \\(точка безубыточности\\): {get("BEP")}
+
+📌 *Прибыльна ли модель:* {"✅ Да" if data.get("Profitable") else "❌ Нет"}
+""".strip()
+
+@router.callback_query(F.data.startswith("count_unit_economics_"))
+async def count_unit_economics(callback: CallbackQuery, state: FSMContext, bot:Bot):
+    try:
+        print(callback.data.split("_")[2:])
+        set_id, unit_id = callback.data.split("_")[3:]
+        analysis = await get_unit_report.get_unit_report(
+            telegram_id=callback.from_user.id,
+            unit_id=unit_id
+        )
+        if not analysis:
+            raise ValueError("Error while generating report")
+
+        await callback.message.answer(
+            format_unit_report(analysis[0]),
+            reply_markup = inline_keyboards.main,
+            parse_mode="MarkdownV2"
+        )
+    except Exception as e:
+        logging.error(e)
+        await callback.message.answer("Извините, не удалось провести анализ модели", reply_markup= inline_keyboards.main)
+
+#==============================================================================================================================================================================================
+# Count unit BEP
+#==============================================================================================================================================================================================
+
+
+@router.callback_query(F.data.startswith("count_unit_bep"))
+async def count_unit_bep(callback: CallbackQuery, state: FSMContext, bot:Bot):
+    try:
+        set_id, model_id = callback.data.split("_")[3:]
+        await callback.answer()
+
+        analysis = await get_unit_report.get_unit_report(
+            telegram_id=callback.from_user.id,
+            unit_id=model_id
+        )
+
+        if not analysis:
+            logging.error("Failed to get report")
+            await callback.message.answer(
+                "К сожалению, не удалось сгенерировать отчёт. Возможно, недостаточно данных 😔",
+                reply_markup=inline_keyboards.main)
+            await callback.answer()
+            return
+        analysis = analysis[0]
+
+        if not analysis.get("Required_units_to_BEP") or analysis.get("UCM")<=0:
+            await callback.message.answer(
+                "К сожалению, данная модель убыточна",
+            )
+            await callback.message.answer(
+                "Точка безубыточности недостижима",
+            )
+            await callback.message.answer(
+                format_bep_report(analysis),
+                reply_markup=inline_keyboards.main,
+                parse_mode = "MarkdownV2"
+            )
+            await callback.answer()
+            return
+
+        image_bytes_list = await get_unit_bep.get_unit_bep(telegram_id=callback.from_user.id, unit_id=model_id)
+
+        if not image_bytes_list:
+            logging.error("Failed to get visual report images from API.")
+            await callback.message.answer(
+                "К сожалению, не удалось сгенерировать отчёт. Возможно, недостаточно данных 😔",
+                reply_markup=inline_keyboards.main)
+            await callback.answer()
+            return
+        
+        first_photo = BufferedInputFile(image_bytes_list[0], filename="report_1.png")
+        caption_text = "📊 Вот ваш визуальный отчёт о точке безубыточности! 📈"
+        analysis = await get_unit_report.get_unit_report(
+            telegram_id=callback.from_user.id,
+            unit_id=model_id
+        )
+        if not analysis:
+            raise ValueError("Error while generating report")
+        await callback.message.answer_photo(
+            photo=first_photo,
+            caption=caption_text
+        )
+
+        for ind, photo_bytes in enumerate(image_bytes_list[1:], start=2):
+            if photo_bytes is None:
+                continue
+            photo_file = BufferedInputFile(photo_bytes, filename=f"report_{ind}.png")
+            await callback.message.answer_photo(
+                photo=photo_file
+            )
+
+        await callback.message.answer(
+            format_bep_report(analysis[0]),
+            reply_markup=inline_keyboards.main,
+            parse_mode = "MarkdownV2"
+        )
+    except Exception as e:
+        logging.error(e)
+        await callback.message.answer("Извините, не удалось посчитать точку безубыточности", reply_markup= inline_keyboards.main)
+"_{set_id}_{unit_id}"
+
+#==============================================================================================================================================================================================
+# Generate unit report
+#==============================================================================================================================================================================================
+
+@router.callback_query(F.data.startswith("generate_report_unit"))
+async def generate_unit_report(callback: CallbackQuery, state: FSMContext, bot:Bot):
+    try:
+        set_id, model_id = callback.data.split("_")[3:]
+        await callback.answer()
+
+        analysis = await get_unit_report.get_unit_report(
+            telegram_id=callback.from_user.id,
+            unit_id=model_id
+        )
+
+        if not analysis:
+            logging.error("Failed to get report")
+            await callback.message.answer(
+                "К сожалению, не удалось сгенерировать отчёт. Возможно, недостаточно данных 😔",
+                reply_markup=inline_keyboards.main)
+            await callback.answer()
+            return
+        analysis = analysis[0]
+
+
+        await callback.answer("Готовлю ваш отчёт...", show_alert=False)
+        docs = await get_unit_exel.get_unit_exel(telegram_id=callback.from_user.id, unit_id=model_id)
+
+        if not docs:
+            await callback.message.answer("Извините, не удалось загрузить отчёт. Обратитесь в поддержку.")
+            return
+
+        await callback.message.answer(
+            "Вот ваш отчёт!"
+        )
+
+        await bot.send_document(
+            chat_id=callback.message.chat.id,
+            document=BufferedInputFile(docs.getvalue(), filename="report.xlsx"),
+            reply_markup=inline_keyboards.main
+        )
+        await state.clear()
+
+
+    except Exception as e:
+        logging.error(e)
+        await callback.message.answer("Извините, не удалось посчитать точку безубыточности", reply_markup= inline_keyboards.main)
+"_{set_id}_{unit_id}"
 
 #===========================================================================================================================
 # Заглушка

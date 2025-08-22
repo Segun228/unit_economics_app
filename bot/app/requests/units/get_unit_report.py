@@ -7,7 +7,7 @@ from pprint import pprint
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-async def post_post( 
+async def get_unit_report( 
         telegram_id, 
         unit_id
     ):
@@ -27,7 +27,7 @@ async def post_post(
         }
         exact_url = f"{base_url}analitics/report/unit/{unit_id}/text/" 
         logging.debug(f"Sending to {exact_url}")
-        async with session.get(
+        async with session.post(
             exact_url, 
             headers=headers,
         ) as response:

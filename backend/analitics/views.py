@@ -1,10 +1,12 @@
-
+import logging
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from django.http import HttpResponseBadRequest, JsonResponse
 
 from rest_framework import status
 from rest_framework.response import Response
+
+from rest_framework.exceptions import bad_request
 
 from api.models import ModelSet, UnitModel
 
@@ -19,9 +21,11 @@ from rest_framework.response import Response
 
 from .permissions import IsAdminCustom
 
-from .handlers import handlers, report_handlers
+from .handlers import handlers, report_handlers, unit_handlers
 
 from rest_framework.views import APIView
+
+from django.http import HttpResponse
 
 
 # ───────────────────────────────────────────────
@@ -52,8 +56,11 @@ class SetTextReportView(AuthView, APIView):
             set = ModelSet.objects.get(pk=set_id)
         except ModelSet.DoesNotExist:
             return Response({"error": "Unit not found"}, status=404)
-        data = UnitModelSerializer(set).data
-
+        try:
+            data = UnitModelSerializer(set).data
+        except Exception as e:
+            logging.error(e)
+            return Response({"error": "Unit not found"}, status=404)
 
 # ───────────────────────────────────────────────
 # 📄 EXCEL REPORTS
@@ -61,12 +68,18 @@ class SetTextReportView(AuthView, APIView):
 
 class UnitExelReportView(AuthView, APIView):
     def post(self, request, *args, **kwargs):
-        unit_id = int(kwargs.get("unit_id"))
+        unit_id = kwargs.get("unit_id")
         try:
-            unit = UnitModel.objects.get(pk=unit_id)
+            unit = UnitModel.objects.get(pk=unit_id, user=request.user)
         except UnitModel.DoesNotExist:
             return Response({"error": "Unit not found"}, status=404)
-        data = UnitModelSerializer(unit).data
+        try:
+            data = UnitModelSerializer(unit).data
+            result = unit_handlers.unit_generate_report(data=data)
+            return result
+        except Exception as e:
+            logging.exception(e)
+            return Response({"error": f"An error occured {e}"}, status=404)
 
 
 class SetExelReportView(AuthView, APIView):
@@ -111,11 +124,21 @@ class UnitCountBEPView(AuthView, APIView):
     def post(self, request, *args, **kwargs):
         unit_id = kwargs.get("unit_id")
         try:
-            unit = UnitModel.objects.get(pk=unit_id)
+            unit = UnitModel.objects.get(pk=unit_id, user=request.user)
         except UnitModel.DoesNotExist:
             return Response({"error": "Unit not found"}, status=404)
-        data = UnitModelSerializer(unit).data
 
+        data = UnitModelSerializer(unit).data
+        try:
+            proc, buf = unit_handlers.unit_count_bep(data=data)
+        except Exception as e:
+            logging.error(f"Error generating plot: {e}")
+            return Response({"error": "Error while generating plot"}, status=400)
+
+        if not proc or not buf:
+            return Response({"error": "Error while generating plot"}, status=400)
+
+        return HttpResponse(buf.getvalue(), content_type='image/png')
 
 class UnitCountRIView(AuthView, APIView):
     def post(self, request, *args, **kwargs):

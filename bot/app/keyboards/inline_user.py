@@ -93,7 +93,7 @@ async def get_posts(posts, category):
 
 async def get_post_menu(category_id, post_id):
     keyboard = InlineKeyboardBuilder()
-    keyboard.add(InlineKeyboardButton(text="Аналитика", callback_data=f"analise_unit_{category_id}"))
+    keyboard.add(InlineKeyboardButton(text="Аналитика", callback_data=f"analise_unit_{category_id}_{post_id}"))
     keyboard.add(InlineKeyboardButton(text="Редактировать модель 📝", callback_data=f"edit_post_{category_id}_{post_id}"))
     keyboard.add(InlineKeyboardButton(text="Удалить модель 🗑️", callback_data=f"delete_post_{category_id}_{post_id}"))
     keyboard.add(InlineKeyboardButton(text="Каталог 📦", callback_data="catalogue"))
@@ -122,6 +122,7 @@ file_panel = InlineKeyboardMarkup(
 async def create_set_edit_menu(set_id):
     keyboard = InlineKeyboardBuilder()
     keyboard.add(InlineKeyboardButton(text="Рассчитать экономику", callback_data=f"count_set_{set_id}"))
+    keyboard.add(InlineKeyboardButton(text="Сгенерировать отчет", callback_data=f"generate_report_set_{set_id}"))
     keyboard.add(InlineKeyboardButton(text="Построить визуализацию", callback_data=f"visualise_set_{set_id}"))
     keyboard.add(InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu"))
     return keyboard.adjust(1).as_markup()
@@ -130,10 +131,10 @@ async def create_set_edit_menu(set_id):
 
 async def create_unit_edit_menu(set_id, unit_id):
     keyboard = InlineKeyboardBuilder()
-    keyboard.add(InlineKeyboardButton(text="Рассчитать экономику", callback_data=f"count_unit_{set_id}_{unit_id}"))
-    keyboard.add(InlineKeyboardButton(text="Рассчитать точку безубыточности", callback_data=f"count_unit_{set_id}_{unit_id}"))
-    keyboard.add(InlineKeyboardButton(text="Рассчитать прибыль", callback_data=f"count_unit_{set_id}_{unit_id}"))
-    keyboard.add(InlineKeyboardButton(text="Рассчитать целевые метрики", callback_data=f"count_unit_{set_id}_{unit_id}"))
+    keyboard.add(InlineKeyboardButton(text="Рассчитать экономику", callback_data=f"count_unit_economics_{set_id}_{unit_id}"))
+    keyboard.add(InlineKeyboardButton(text="Рассчитать точку безубыточности", callback_data=f"count_unit_bep_{set_id}_{unit_id}"))
+    keyboard.add(InlineKeyboardButton(text="Рассчитать отчет P&L", callback_data=f"count_unit_pnl_{set_id}_{unit_id}"))
+    keyboard.add(InlineKeyboardButton(text="Сгенерировать Unit-отчет", callback_data=f"generate_report_unit_{set_id}_{unit_id}"))
     keyboard.add(InlineKeyboardButton(text="Построить визуализацию", callback_data=f"visualise_unit_{set_id}_{unit_id}"))
     keyboard.add(InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu"))
     return keyboard.adjust(1).as_markup()
