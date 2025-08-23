@@ -50,6 +50,7 @@ from app.requests.put import update_model_cohort_data
 from app.requests.units.get_unit_cohort import get_unit_cohort
 
 from app.requests.sets.get_set_report import get_set_report
+from app.requests.sets.set_visualize import set_visualize
 #===========================================================================================================================
 # Конфигурация основных маршрутов
 #===========================================================================================================================
@@ -1157,23 +1158,13 @@ async def count_set_economics(callback: CallbackQuery, state: FSMContext, bot:Bo
 
 
 @router.callback_query(F.data.startswith("visual_set"))
-async def set_visualize(callback: CallbackQuery, state: FSMContext, bot:Bot):
+async def set_visualize_callback(callback: CallbackQuery, state: FSMContext, bot:Bot):
     try:
         set_id = int(callback.data.split("_")[2])
         await state.clear()
-        result = await update_model_cohort_data.update_model_cohort_data(
-            telegram_id=message.from_user.id,
+        zip_buf = await set_visualize(
+            telegram_id= callback.from_user.id,
             set_id = set_id,
-            model_id = model_id,
-            retention = retention,
-            growth = growth
-        )
-        if not result:
-            raise Exception("Error while patching model")
-        
-        zip_buf = await get_unit_cohort(
-            telegram_id= message.from_user.id,
-            unit_id= model_id
         )
         if not zip_buf:
             raise Exception("Error while getting report from the server")
@@ -1186,12 +1177,12 @@ async def set_visualize(callback: CallbackQuery, state: FSMContext, bot:Bot):
                     file_buf.seek(0)
 
                     document = BufferedInputFile(file_buf.read(), filename=filename)
-                    await bot.send_document(chat_id=message.from_user.id, document=document)
-        await message.answer("Ваш отчет готов!", reply_markup= inline_keyboards.main)
+                    await bot.send_document(chat_id=callback.from_user.id, document=document)
+        await callback.message.answer("Ваш отчет готов!", reply_markup= inline_keyboards.main)
 
     except Exception as e:
         logging.exception(e)
-        await message.answer("Возникла ошибка при анализе", reply_markup= inline_keyboards.main)
+        await callback.message.answer("Возникла ошибка при анализе", reply_markup= inline_keyboards.main)
         raise
     finally:
         await state.clear()

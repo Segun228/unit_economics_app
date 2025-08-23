@@ -14,7 +14,7 @@ urlpatterns = [
 
     # ---------------- EVALUATE ----------------
     path('evaluate/unit/<int:unit_id>/break_even_point/', views.UnitCountBEPView.as_view(), name='evaluate_unit_bep'),
-    path('evaluate/set/<int:set_id>/break_even_point/', views.SetCountBEPView.as_view(), name='evaluate_set_bep'),
+
 
     # ---------------- COHORT ----------------
     path('cohort/unit/<int:unit_id>/', views.UnitCohortView.as_view(), name='unit_cohort_analisis'),

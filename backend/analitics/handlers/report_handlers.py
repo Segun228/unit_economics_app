@@ -182,10 +182,10 @@ def set_visualize(data, metrics=None):
 
         for i, unit in enumerate(units, start=1):
             try:
-                result = unit_calculate_economics(unit)
+                result = unit_calculate_economics(unit)[0]
                 if result is not None:
-                    df_unit = pd.DataFrame([result])  # каждая unit — одна строка
-                    df_unit["Unit"] = unit.get("name", f"Unit_{i}")  # чтобы было имя для оси X
+                    df_unit = pd.DataFrame([result])  
+                    df_unit["Unit"] = unit.get("name", f"Unit_{i}") 
                     calculated_units.append(df_unit)
                 else:
                     errors.append({"index": i, "error": "Calculation returned None"})
@@ -206,13 +206,15 @@ def set_visualize(data, metrics=None):
                     continue
 
                 plt.figure(figsize=(8, 6))
-                sns.barplot(x="Unit", y=metric, data=big_df, palette="tab10")
+                sns.barplot(x="Unit", y=metric, data=big_df, palette="tab10", hue="Unit")
                 plt.title(f"{metric} comparison - {set_name}")
                 plt.ylabel(metric)
                 plt.xlabel("Units")
                 plt.xticks(rotation=45)
                 plt.tight_layout()
-
+                plt.grid(True)
+                plt.axhline(0, color='black', linewidth=0.5)
+                plt.axvline(0, color='black', linewidth=0.5)
                 buf = io.BytesIO()
                 plt.savefig(buf, format='png', dpi=300)
                 plt.close()
