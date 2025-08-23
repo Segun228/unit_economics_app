@@ -19,7 +19,9 @@ class UnitModelSerializer(serializers.ModelSerializer):
             'COGS1s',
             'created_at',
             'updated_at',
-            'FC'
+            'FC',
+            'RR',
+            'AGR'
         ]
         read_only_fields = ['id', 'user', 'created_at', 'updated_at', 'model_set']
 

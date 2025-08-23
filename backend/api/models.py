@@ -25,6 +25,9 @@ class UnitModel(models.Model):
     COGS = models.IntegerField(blank=False, null=False, default=0)
     COGS1s = models.IntegerField(blank=False, null=False, default=0)
     FC = models.IntegerField(blank=False, null=False, default=0)
+    RR = models.FloatField(blank=False, null=False, default=1)
+    AGR = models.FloatField(blank=False, null=False, default=0)
+
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

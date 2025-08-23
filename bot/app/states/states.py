@@ -48,3 +48,9 @@ class File(StatesGroup):
     waiting_for_file = State()
     waiting_for_name = State()
     waiting_for_replace_file = State()
+
+
+class Cohort(StatesGroup):
+    handle_unit = State()
+    retention_rate = State()
+    audience_growth_rate = State()

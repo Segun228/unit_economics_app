@@ -1,13 +1,19 @@
+from os import name
 from typing import Dict, List
 import pandas as pd
 import numpy as np
 import seaborn as sns
-
+import zipfile
+import io
 import matplotlib as mplb
-
+mplb.use('Agg')
+import matplotlib.pyplot as plt
 import logging
 from pprint import pprint
-from django.http.response import HttpResponseBadRequest
+from django.http.response import HttpResponseBadRequest, HttpResponse
+from rest_framework.response import Response
+
+pd.set_option('future.no_silent_downcasting', True)
 '''
 given fields
 data = {
@@ -129,33 +135,97 @@ def process_dataframe(df:pd.DataFrame):
 def set_calculate_economics(data):
     calculated_units = []
     errors = []
-
     try:
-        units = data.get("units") # TODO пофиксить название поля
+        set_name = data.get("name", "Model Set Name")
+        units = data.get("units")
         if units is None or not isinstance(units, list):
             raise ValueError("Empty or invalid 'units' list")
 
         for i, unit in enumerate(units, start=1):
             try:
                 result = unit_calculate_economics(unit)
-                if result:
-                    calculated_units.append(result)
+                if result is not None:
+                    calculated_units.extend(result)
+                else:
+                    errors.append({"index": i, "error": "Calculation returned None"})
+            except Exception as e:
+                logging.warning(f"Ошибка при расчёте unit[{i}]: {e}")
+                errors.append({"index": i, "error": str(e)})
+        return Response({
+            "name":name,
+            "success": True,
+            "calculated": calculated_units,
+            "errors": errors,
+        })
+    
+    except Exception as e:
+        logging.error(f"Ошибка в set_calculate_economics: {e}")
+        return None
+
+
+def set_visualize(data, metrics=None):
+    """
+    data: dict с ключами "name" и "units" (список словарей с результатами расчета unit_calculate_economics)
+    metrics: список метрик для построения сравнительных графиков
+    """
+    if metrics is None:
+        metrics = ["CPA", "CAC", "CLTV", "LTV", "UCM", "CCM", "C1"]
+
+    calculated_units = []
+    errors = []
+    
+    try:
+        set_name = data.get("name", "Model Set Name")
+        units = data.get("units")
+        if not units or not isinstance(units, list):
+            raise ValueError("Empty or invalid 'units' list")
+
+        for i, unit in enumerate(units, start=1):
+            try:
+                result = unit_calculate_economics(unit)
+                if result is not None:
+                    df_unit = pd.DataFrame([result])  # каждая unit — одна строка
+                    df_unit["Unit"] = unit.get("name", f"Unit_{i}")  # чтобы было имя для оси X
+                    calculated_units.append(df_unit)
                 else:
                     errors.append({"index": i, "error": "Calculation returned None"})
             except Exception as e:
                 logging.warning(f"Ошибка при расчёте unit[{i}]: {e}")
                 errors.append({"index": i, "error": str(e)})
 
-        return {
-            "success": True,
-            "calculated": calculated_units,
-            "errors": errors,
-        }
+        if not calculated_units:
+            raise ValueError("No valid units for visualization")
 
+        big_df = pd.concat(calculated_units, ignore_index=True)
+
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for metric in metrics:
+                if metric not in big_df.columns:
+                    logging.warning(f"Метрика {metric} отсутствует в данных, пропускаем")
+                    continue
+
+                plt.figure(figsize=(8, 6))
+                sns.barplot(x="Unit", y=metric, data=big_df, palette="tab10")
+                plt.title(f"{metric} comparison - {set_name}")
+                plt.ylabel(metric)
+                plt.xlabel("Units")
+                plt.xticks(rotation=45)
+                plt.tight_layout()
+
+                buf = io.BytesIO()
+                plt.savefig(buf, format='png', dpi=300)
+                plt.close()
+                buf.seek(0)
+                zipf.writestr(f"{metric}.png", buf.getvalue())
+
+        zip_buffer.seek(0)
+        response = HttpResponse(zip_buffer.getvalue(), content_type='application/zip')
+        response['Content-Disposition'] = 'attachment; filename="report_bundle.zip"'
+        return response
     except Exception as e:
-        logging.error(f"Ошибка в set_calculate_economics: {e}")
-        return None
-
+        logging.exception(f"Ошибка в set_visualize: {e}")
+        return None, errors
 
 if __name__ == "__main__":
     data = {
@@ -170,4 +240,48 @@ if __name__ == "__main__":
         "COGS1s": 40,
         "FC": 1000
     }
-    pprint(unit_calculate_economics(data))
+
+    set = {
+        "name":"dummy data",
+        "units":[
+        {
+            "name": "Unit 1",
+            "users": 100,
+            "customers": 50,
+            "AVP": 2000,
+            "APC": 500,
+            "TMS": 10000,
+            "COGS": 5000,
+            "COGS1s": 2000,
+            "FC": 3000,
+            "RR": 0.05,
+            "AGR": 0.10
+        },
+        {
+            "name": "Unit 2",
+            "users": 80,
+            "customers": 40,
+            "AVP": 1800,
+            "APC": 450,
+            "TMS": 9000,
+            "COGS": 4000,
+            "COGS1s": 1500,
+            "FC": 2500,
+            "RR": 0.06,
+            "AGR": 0.12
+        },
+        {
+            "name": "Unit 3",
+            "users": 150,
+            "customers": 70,
+            "AVP": 2200,
+            "APC": 550,
+            "TMS": 12000,
+            "COGS": 6000,
+            "COGS1s": 2500,
+            "FC": 3500,
+            "RR": 0.07,
+            "AGR": 0.15
+        }
+    ]}
+    pprint(set_visualize(data = set))

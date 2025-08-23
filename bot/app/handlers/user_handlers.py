@@ -1,6 +1,8 @@
 from app.handlers.router import admin_router as router
 import logging
 import re
+import zipfile
+import io
 from aiogram.types import Message, CallbackQuery, BufferedInputFile
 from aiogram.filters import CommandStart, Command, StateFilter
 from aiogram import F
@@ -15,7 +17,7 @@ from aiogram.types import InputFile
 
 from app.keyboards import inline_user as inline_keyboards
 
-from app.states.states import Unit, Set, Send, File, UnitEdit
+from app.states.states import Unit, Set, Send, File, UnitEdit, Cohort
 
 from aiogram.types import BufferedInputFile
 
@@ -44,6 +46,10 @@ from app.requests.files.get_report import get_report
 from app.requests.files.put_report import put_report
 
 from app.requests.units import get_unit_report, get_unit_bep, get_unit_exel
+from app.requests.put import update_model_cohort_data
+from app.requests.units.get_unit_cohort import get_unit_cohort
+
+from app.requests.sets.get_set_report import get_set_report
 #===========================================================================================================================
 # Конфигурация основных маршрутов
 #===========================================================================================================================
@@ -597,8 +603,8 @@ async def reject_acess_admin(callback: CallbackQuery, state: FSMContext, bot:Bot
         await bot.send_message(chat_id=int(user_id), text="К сожалению, вам было отказано в предоставлении прав администратора", reply_markup=inline_keyboards.home)
     except Exception as e:
         logging.error(e)
-
-
+    finally:
+        await state.clear()
 
 #===========================================================================================================================
 # Файловое меню
@@ -607,6 +613,7 @@ async def reject_acess_admin(callback: CallbackQuery, state: FSMContext, bot:Bot
 
 @router.callback_query(F.data == "file_panel")
 async def file_panel_admin(callback: CallbackQuery, state: FSMContext, bot:Bot):
+    await state.clear()
     await callback.message.edit_text(
         "Выберите интересующую функцию",
         reply_markup= inline_keyboards.file_panel
@@ -683,25 +690,11 @@ async def upload_add_file_admin(message: Message, state: FSMContext, bot: Bot):
         await state.clear()
         logging.error(f"Ошибка при обработке Excel: {e}")
         await message.answer("Не удалось обработать файл. Убедитесь, что это корректный Excel (.xlsx).", reply_markup= inline_keyboards.file_panel)
+    finally:
+        await state.clear()
 
 
 
-
-#==============================================================================================================================================================================================
-# Set analysis
-#==============================================================================================================================================================================================
-
-@router.callback_query(F.data.startswith("analise_set"))
-async def analyse_set_menu(callback: CallbackQuery, state: FSMContext, bot:Bot):
-    try:
-        set_id = callback.data.split("_")[2]
-        await callback.message.answer(
-            "Меню аналитики текущего набора моделей",
-            reply_markup = await inline_keyboards.create_set_edit_menu(set_id)
-        )
-    except Exception as e:
-        logging.error(e)
-        await callback.message.answer("Не удалось загрузить аналитический интерфейс, извините", reply_markup=inline_keyboards.main)
 
 
 #==============================================================================================================================================================================================
@@ -712,7 +705,7 @@ async def analyse_set_menu(callback: CallbackQuery, state: FSMContext, bot:Bot):
 @router.callback_query(F.data.startswith("analise_unit"))
 async def analyse_unit_menu(callback: CallbackQuery, state: FSMContext, bot:Bot):
     try:
-        print(callback.data.split("_")[2:])
+        await state.clear()
         set_id, unit_id = callback.data.split("_")[2:]
         await callback.message.answer(
             "Меню аналитики текущей модели",
@@ -770,7 +763,7 @@ def format_unit_report(data: dict) -> str:
 \\- Требуется юнитов до BEP: {get("Required_units_to_BEP")}
 \\- BEP \\(точка безубыточности\\): {get("BEP")}
 
-📌 *Прибыльна ли модель:* {"✅ Да" if data.get("Profitable") else "❌ Нет"}
+📌 *Прибыльна ли модель:* {"✅ Да" if data.get("CCM", 0)>0 else "❌ Нет"}
 """.strip()
 
 
@@ -799,7 +792,7 @@ def format_bep_report(data: dict) -> str:
 \\- Требуется юнитов до BEP: {get("Required_units_to_BEP")}
 \\- BEP \\(точка безубыточности\\): {get("BEP")}
 
-📌 *Прибыльна ли модель:* {"✅ Да" if data.get("Profitable") else "❌ Нет"}
+📌 *Прибыльна ли модель:* {"✅ Да" if data.get("CCM", 0)>0 else "❌ Нет"}
 """.strip()
 
 @router.callback_query(F.data.startswith("count_unit_economics_"))
@@ -822,7 +815,8 @@ async def count_unit_economics(callback: CallbackQuery, state: FSMContext, bot:B
     except Exception as e:
         logging.error(e)
         await callback.message.answer("Извините, не удалось провести анализ модели", reply_markup= inline_keyboards.main)
-
+    finally:
+        await state.clear()
 #==============================================================================================================================================================================================
 # Count unit BEP
 #==============================================================================================================================================================================================
@@ -831,6 +825,7 @@ async def count_unit_economics(callback: CallbackQuery, state: FSMContext, bot:B
 @router.callback_query(F.data.startswith("count_unit_bep"))
 async def count_unit_bep(callback: CallbackQuery, state: FSMContext, bot:Bot):
     try:
+        await state.clear()
         set_id, model_id = callback.data.split("_")[3:]
         await callback.answer()
 
@@ -902,7 +897,8 @@ async def count_unit_bep(callback: CallbackQuery, state: FSMContext, bot:Bot):
     except Exception as e:
         logging.error(e)
         await callback.message.answer("Извините, не удалось посчитать точку безубыточности", reply_markup= inline_keyboards.main)
-"_{set_id}_{unit_id}"
+    finally:
+        await state.clear()
 
 #==============================================================================================================================================================================================
 # Generate unit report
@@ -911,6 +907,7 @@ async def count_unit_bep(callback: CallbackQuery, state: FSMContext, bot:Bot):
 @router.callback_query(F.data.startswith("generate_report_unit"))
 async def generate_unit_report(callback: CallbackQuery, state: FSMContext, bot:Bot):
     try:
+        await state.clear()
         set_id, model_id = callback.data.split("_")[3:]
         await callback.answer()
 
@@ -951,7 +948,256 @@ async def generate_unit_report(callback: CallbackQuery, state: FSMContext, bot:B
     except Exception as e:
         logging.error(e)
         await callback.message.answer("Извините, не удалось посчитать точку безубыточности", reply_markup= inline_keyboards.main)
-"_{set_id}_{unit_id}"
+    finally:
+        await state.clear()
+
+
+#===========================================================================================================================
+# Unit Когортный анализ
+#===========================================================================================================================
+
+@router.callback_query(F.data.startswith("cohort_analisis_"))
+async def start_cohort_analisis(callback: CallbackQuery, state: FSMContext, bot:Bot):
+    try:
+        await state.clear()
+        set_id, model_id = callback.data.split("_")[2:]
+        await callback.answer()
+        await state.set_state(Cohort.handle_unit)
+        await state.update_data(set_id = set_id)
+        await state.update_data(model_id = model_id)
+
+        """
+        analysis = await get_unit_report.get_unit_report(
+            telegram_id=callback.from_user.id,
+            unit_id=model_id
+        )
+        if not analysis:
+            logging.error("Failed to get report")
+            await callback.message.answer(
+                "К сожалению, не удалось сгенерировать отчёт. Возможно, недостаточно данных 😔",
+                reply_markup=inline_keyboards.main)
+            await callback.answer()
+            return
+        analysis = analysis[0]
+        """
+        await callback.message.answer("Введите процент сохранения аудитории (retention rate, %)")
+    except Exception as e:
+        logging.error(e)
+        await callback.message.answer("Возникла ошибка при анализе", reply_markup= inline_keyboards.main)
+
+
+@router.message(Cohort.handle_unit)
+async def continue_cohort_analisis(message:Message, state: FSMContext, bot:Bot):
+    retention = message.text
+    try:
+        if not retention:
+            raise ValueError("Invalid retention rate given")
+        retention = float(retention)
+        await state.update_data(retention = retention)
+        await state.set_state(Cohort.retention_rate)
+        await message.answer("Введите ожидаемый месячный прирост аудитории (audience growth rate, %)")
+
+    except Exception as e:
+        logging.exception(e)
+        await message.answer("Возникла ошибка при анализе", reply_markup= inline_keyboards.main)
+        raise
+
+
+@router.message(Cohort.retention_rate)
+async def finish_cohort_analisis(message:Message, state: FSMContext, bot:Bot):
+    growth = message.text
+    try:
+        if not growth:
+            raise ValueError("Invalid retention rate given")
+        growth = float(growth)
+        data = await state.get_data()
+        set_id = data.get("set_id")
+        model_id = data.get("model_id")
+        retention = data.get("retention")
+        await state.clear()
+        result = await update_model_cohort_data.update_model_cohort_data(
+            telegram_id=message.from_user.id,
+            set_id = set_id,
+            model_id = model_id,
+            retention = retention,
+            growth = growth
+        )
+        if not result:
+            raise Exception("Error while patching model")
+        
+        zip_buf = await get_unit_cohort(
+            telegram_id= message.from_user.id,
+            unit_id= model_id
+        )
+        if not zip_buf:
+            raise Exception("Error while getting report from the server")
+        zip_buf = io.BytesIO(zip_buf)
+        with zipfile.ZipFile(zip_buf, 'r') as zip_ref:
+            for filename in zip_ref.namelist():
+                if filename.endswith(('.png', '.xlsx')): 
+                    file_bytes = zip_ref.read(filename)
+                    file_buf = io.BytesIO(file_bytes)
+                    file_buf.seek(0)
+
+                    document = BufferedInputFile(file_buf.read(), filename=filename)
+                    await bot.send_document(chat_id=message.from_user.id, document=document)
+        await message.answer("Ваш отчет готов!", reply_markup= inline_keyboards.main)
+
+    except Exception as e:
+        logging.exception(e)
+        await message.answer("Возникла ошибка при анализе", reply_markup= inline_keyboards.main)
+        raise
+    finally:
+        await state.clear()
+
+
+#==============================================================================================================================================================================================
+# Set text analisis
+#==============================================================================================================================================================================================
+
+
+@router.callback_query(F.data.startswith("analise_set"))
+async def analyse_set_menu_latest(callback: CallbackQuery, state: FSMContext, bot:Bot):
+    try:
+        await state.clear()
+        set_id = callback.data.split("_")[2]
+        await callback.message.answer(
+            "Меню аналитики текущего сета",
+            reply_markup= await inline_keyboards.create_set_edit_menu(set_id)
+        )
+    except Exception as e:
+        logging.error(e)
+        await callback.message.answer("Не удалось загрузить аналитический интерфейс, извините", reply_markup= inline_keyboards.main)
+
+
+
+def format_model_report(data: dict) -> str:
+    get = lambda key: escape_md_v2(data.get(key))
+    return f"""
+📊 *Отчет по юнит\\-экономике*
+
+*Название:* `{get('name')}`
+*Пользователи:* `{get('users')}`
+*Клиенты:* `{get('customers')}`
+*AVP:* `{get('AVP')}`
+*APC:* `{get('APC')}`
+*TMS:* `{get('TMS')}`
+*COGS:* `{get('COGS')}`
+*COGS1s:* `{get('COGS1s')}`
+*FC:* `{get('FC')}`
+
+🔢 *Ключевые метрики:*
+\\- C1 \\(конверсия\\): {get("C1")}
+\\- ARPC \\(доход с клиента\\): {get("ARPC")}
+\\- ARPU \\(доход с пользователя\\): {get("ARPU")}
+\\- CPA \\(цена привлечения пользователя\\): {get("CPA")}
+\\- CAC \\(цена привлечения клиента\\): {get("CAC")}
+
+💰 *Доходность:*
+\\- CLTV \\(пожизненная ценность клиента\\): {get("CLTV")}
+\\- LTV \\(ценность клиента с учетом C1\\): {get("LTV")}
+\\- ROI: {get("ROI")} \\%
+\\- UCM \\(юнит\\-contrib\\-маржа\\): {get("UCM")}
+\\- CCM \\(клиент\\-contrib\\-маржа\\): {get("CCM")}
+
+📈 *Выручка и прибыль:*
+\\- Revenue \\(выручка\\): {get("Revenue")}
+\\- Gross Profit \\(валовая прибыль\\): {get("Gross_profit")}
+\\- Margin \\(маржа\\): {get("Margin")}
+\\- FC \\(постоянные издержки\\): {get("FC")}
+\\- Profit \\(прибыль\\): {get("Profit")}
+
+⚖️ *Окупаемость:*
+\\- Требуется юнитов до BEP: {get("Required_units_to_BEP")}
+\\- BEP \\(точка безубыточности\\): {get("BEP")}
+
+📌 *Прибыльна ли модель:* {"✅ Да" if data.get("CCM", 0)>0 else "❌ Нет"}
+""".strip()
+
+
+def format_set_report(data:list):
+    result = []
+    for i, el in enumerate(data):
+        buf = format_unit_report(el)
+        if not buf:
+            continue
+        result.append(buf)
+    return result
+
+
+@router.callback_query(F.data.startswith("count_set_"))
+async def count_set_economics(callback: CallbackQuery, state: FSMContext, bot:Bot):
+    try:
+        set_id = callback.data.split("_")[2]
+        analysis = await get_set_report(
+            telegram_id=callback.from_user.id,
+            set_id = set_id
+        )
+        if not analysis:
+            raise ValueError("Error while generating report")
+        result = format_set_report(analysis)
+        for i, el in enumerate(result):
+            await callback.message.answer(
+                el,
+                parse_mode="MarkdownV2"
+            )
+        await callback.message.answer("Ваш отчет готов!", reply_markup = inline_keyboards.main)
+    except Exception as e:
+        logging.error(e)
+        await callback.message.answer("Извините, не удалось провести анализ модели", reply_markup= inline_keyboards.main)
+    finally:
+        await state.clear()
+
+
+#===========================================================================================================================
+# Сет визуализация
+#===========================================================================================================================
+
+
+
+
+@router.callback_query(F.data.startswith("visual_set"))
+async def set_visualize(callback: CallbackQuery, state: FSMContext, bot:Bot):
+    try:
+        set_id = int(callback.data.split("_")[2])
+        await state.clear()
+        result = await update_model_cohort_data.update_model_cohort_data(
+            telegram_id=message.from_user.id,
+            set_id = set_id,
+            model_id = model_id,
+            retention = retention,
+            growth = growth
+        )
+        if not result:
+            raise Exception("Error while patching model")
+        
+        zip_buf = await get_unit_cohort(
+            telegram_id= message.from_user.id,
+            unit_id= model_id
+        )
+        if not zip_buf:
+            raise Exception("Error while getting report from the server")
+        zip_buf = io.BytesIO(zip_buf)
+        with zipfile.ZipFile(zip_buf, 'r') as zip_ref:
+            for filename in zip_ref.namelist():
+                if filename.endswith(('.png', '.xlsx')): 
+                    file_bytes = zip_ref.read(filename)
+                    file_buf = io.BytesIO(file_bytes)
+                    file_buf.seek(0)
+
+                    document = BufferedInputFile(file_buf.read(), filename=filename)
+                    await bot.send_document(chat_id=message.from_user.id, document=document)
+        await message.answer("Ваш отчет готов!", reply_markup= inline_keyboards.main)
+
+    except Exception as e:
+        logging.exception(e)
+        await message.answer("Возникла ошибка при анализе", reply_markup= inline_keyboards.main)
+        raise
+    finally:
+        await state.clear()
+
+
+
 
 #===========================================================================================================================
 # Заглушка

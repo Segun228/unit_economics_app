@@ -85,7 +85,7 @@ async def get_posts(posts, category):
     keyboard.add(InlineKeyboardButton(text="Редактировать набор ✏️", callback_data=f"edit_category_{category_id}"))
     keyboard.add(InlineKeyboardButton(text="Удалить набор ❌", callback_data=f"delete_category_{category_id}"))
     keyboard.add(InlineKeyboardButton(text="Создать модель ➕", callback_data=f"create_post_{category_id}"))
-    keyboard.add(InlineKeyboardButton(text="Аналитика", callback_data=f"analize_set_{category_id}"))
+    keyboard.add(InlineKeyboardButton(text="Аналитика", callback_data=f"analise_set_{category_id}"))
     keyboard.add(InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu"))
     return keyboard.adjust(1).as_markup()
 
@@ -123,7 +123,8 @@ async def create_set_edit_menu(set_id):
     keyboard = InlineKeyboardBuilder()
     keyboard.add(InlineKeyboardButton(text="Рассчитать экономику", callback_data=f"count_set_{set_id}"))
     keyboard.add(InlineKeyboardButton(text="Сгенерировать отчет", callback_data=f"generate_report_set_{set_id}"))
-    keyboard.add(InlineKeyboardButton(text="Построить визуализацию", callback_data=f"visualise_set_{set_id}"))
+    keyboard.add(InlineKeyboardButton(text="Конкурентная визуализация", callback_data=f"visual_set_{set_id}"))
+    keyboard.add(InlineKeyboardButton(text="Когортный анализ", callback_data=f"cohort_set_{set_id}"))
     keyboard.add(InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu"))
     return keyboard.adjust(1).as_markup()
 
@@ -133,8 +134,7 @@ async def create_unit_edit_menu(set_id, unit_id):
     keyboard = InlineKeyboardBuilder()
     keyboard.add(InlineKeyboardButton(text="Рассчитать экономику", callback_data=f"count_unit_economics_{set_id}_{unit_id}"))
     keyboard.add(InlineKeyboardButton(text="Рассчитать точку безубыточности", callback_data=f"count_unit_bep_{set_id}_{unit_id}"))
-    keyboard.add(InlineKeyboardButton(text="Рассчитать отчет P&L", callback_data=f"count_unit_pnl_{set_id}_{unit_id}"))
+    keyboard.add(InlineKeyboardButton(text="Когортный анализ", callback_data=f"cohort_analisis_{set_id}_{unit_id}"))
     keyboard.add(InlineKeyboardButton(text="Сгенерировать Unit-отчет", callback_data=f"generate_report_unit_{set_id}_{unit_id}"))
-    keyboard.add(InlineKeyboardButton(text="Построить визуализацию", callback_data=f"visualise_unit_{set_id}_{unit_id}"))
     keyboard.add(InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu"))
     return keyboard.adjust(1).as_markup()
