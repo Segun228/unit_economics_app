@@ -7,7 +7,7 @@ from pprint import pprint
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-async def get_set_report( 
+async def set_generate_report( 
         telegram_id, 
         set_id
     ):
@@ -25,15 +25,14 @@ async def get_set_report(
         headers = {
             "Authorization": f"Bot {telegram_id}",
         }
-        exact_url = f"{base_url}analitics/report/set/{set_id}/text/" 
+        exact_url = f"{base_url}analitics/report/set/{set_id}/xlsx/" 
         logging.debug(f"Sending to {exact_url}")
         async with session.post(
             exact_url, 
             headers=headers,
         ) as response:
             if response.status in (200, 201, 202, 203):
-                logging.info("текстовые отчеты по сетам получены")
-                final = (await response.json()).get("calculated")
-                return final
+                logging.info("эксель отчеты по сетам получены")
+                return await response.read()
             else:
                 return None

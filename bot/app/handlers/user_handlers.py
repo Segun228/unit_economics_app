@@ -49,7 +49,7 @@ from app.requests.units import get_unit_report, get_unit_bep, get_unit_exel
 from app.requests.put import update_model_cohort_data
 from app.requests.units.get_unit_cohort import get_unit_cohort
 
-from app.requests.sets.get_set_report import get_set_report
+from app.requests.sets.set_generate_report import set_generate_report
 from app.requests.sets.set_visualize import set_visualize
 #===========================================================================================================================
 # Конфигурация основных маршрутов
@@ -1155,8 +1155,6 @@ async def count_set_economics(callback: CallbackQuery, state: FSMContext, bot:Bo
 #===========================================================================================================================
 
 
-
-
 @router.callback_query(F.data.startswith("visual_set"))
 async def set_visualize_callback(callback: CallbackQuery, state: FSMContext, bot:Bot):
     try:
@@ -1187,8 +1185,139 @@ async def set_visualize_callback(callback: CallbackQuery, state: FSMContext, bot
     finally:
         await state.clear()
 
+#===========================================================================================================================
+# Сет XLSX отчет
+#===========================================================================================================================
+
+@router.callback_query(F.data.startswith("generate_report_set"))
+async def set_generate_xlsx_report_callback(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    try:
+        set_id = int(callback.data.split("_")[3])
+        await state.clear()
+
+        xlsx_bytes = await set_generate_report(
+            telegram_id=callback.from_user.id,
+            set_id=set_id,
+        )
+
+        if not xlsx_bytes:
+            raise Exception("Error while getting report from the server")
+
+        file_buf = io.BytesIO(xlsx_bytes)
+        file_buf.seek(0)
+
+        document = BufferedInputFile(file_buf.read(), filename="report.xlsx")
+        await bot.send_document(
+            chat_id=callback.message.chat.id,
+            document=document
+        )
+
+        await callback.message.answer("Ваш XLSX отчет готов!", reply_markup=inline_keyboards.main)
+
+    except Exception as e:
+        logging.exception(e)
+        await callback.message.answer("Возникла ошибка при анализе", reply_markup=inline_keyboards.main)
+        raise
+    finally:
+        await state.clear()
+
+#===========================================================================================================================
+# Сет когортный анализ
+#===========================================================================================================================
+
+@router.callback_query(F.data.startswith("cohort_analisis_"))
+async def start_cohort_analisis(callback: CallbackQuery, state: FSMContext, bot:Bot):
+    try:
+        await state.clear()
+        set_id, model_id = callback.data.split("_")[2:]
+        await callback.answer()
+        await state.set_state(Cohort.handle_unit)
+        await state.update_data(set_id = set_id)
+        await state.update_data(model_id = model_id)
+
+        """
+        analysis = await get_unit_report.get_unit_report(
+            telegram_id=callback.from_user.id,
+            unit_id=model_id
+        )
+        if not analysis:
+            logging.error("Failed to get report")
+            await callback.message.answer(
+                "К сожалению, не удалось сгенерировать отчёт. Возможно, недостаточно данных 😔",
+                reply_markup=inline_keyboards.main)
+            await callback.answer()
+            return
+        analysis = analysis[0]
+        """
+        await callback.message.answer("Введите процент сохранения аудитории (retention rate, %)")
+    except Exception as e:
+        logging.error(e)
+        await callback.message.answer("Возникла ошибка при анализе", reply_markup= inline_keyboards.main)
 
 
+@router.message(Cohort.handle_unit)
+async def continue_cohort_analisis(message:Message, state: FSMContext, bot:Bot):
+    retention = message.text
+    try:
+        if not retention:
+            raise ValueError("Invalid retention rate given")
+        retention = float(retention)
+        await state.update_data(retention = retention)
+        await state.set_state(Cohort.retention_rate)
+        await message.answer("Введите ожидаемый месячный прирост аудитории (audience growth rate, %)")
+
+    except Exception as e:
+        logging.exception(e)
+        await message.answer("Возникла ошибка при анализе", reply_markup= inline_keyboards.main)
+        raise
+
+
+@router.message(Cohort.retention_rate)
+async def finish_cohort_analisis(message:Message, state: FSMContext, bot:Bot):
+    growth = message.text
+    try:
+        if not growth:
+            raise ValueError("Invalid retention rate given")
+        growth = float(growth)
+        data = await state.get_data()
+        set_id = data.get("set_id")
+        model_id = data.get("model_id")
+        retention = data.get("retention")
+        await state.clear()
+        result = await update_model_cohort_data.update_model_cohort_data(
+            telegram_id=message.from_user.id,
+            set_id = set_id,
+            model_id = model_id,
+            retention = retention,
+            growth = growth
+        )
+        if not result:
+            raise Exception("Error while patching model")
+        
+        zip_buf = await get_unit_cohort(
+            telegram_id= message.from_user.id,
+            unit_id= model_id
+        )
+        if not zip_buf:
+            raise Exception("Error while getting report from the server")
+        zip_buf = io.BytesIO(zip_buf)
+        with zipfile.ZipFile(zip_buf, 'r') as zip_ref:
+            for filename in zip_ref.namelist():
+                if filename.endswith(('.png', '.xlsx')): 
+                    file_bytes = zip_ref.read(filename)
+                    file_buf = io.BytesIO(file_bytes)
+                    file_buf.seek(0)
+
+                    document = BufferedInputFile(file_buf.read(), filename=filename)
+                    await bot.send_document(chat_id=message.from_user.id, document=document)
+        await message.answer("Ваш отчет готов!", reply_markup= inline_keyboards.main)
+
+    except Exception as e:
+        logging.exception(e)
+        await message.answer("Возникла ошибка при анализе", reply_markup= inline_keyboards.main)
+        raise
+    finally:
+        await state.clear()
 
 #===========================================================================================================================
 # Заглушка

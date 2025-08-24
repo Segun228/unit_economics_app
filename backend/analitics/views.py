@@ -21,7 +21,7 @@ from rest_framework.response import Response
 
 from .permissions import IsAdminCustom
 
-from .handlers import handlers, report_handlers, unit_handlers
+from .handlers import handlers, report_handlers, unit_handlers, set_handlers
 
 from rest_framework.views import APIView
 
@@ -87,10 +87,14 @@ class SetExelReportView(AuthView, APIView):
     def post(self, request, *args, **kwargs):
         set_id = kwargs.get("set_id")
         try:
-            set = ModelSet.objects.get(pk=set_id)
+            set = ModelSet.objects.get(pk=set_id, user=request.user)
+            data = ModelSetReadSerializer(set).data
+            return set_handlers.set_generate_report(data = data)
         except ModelSet.DoesNotExist:
-            return Response({"error": "Unit not found"}, status=404)
-        data = UnitModelSerializer(set).data
+            return Response({"error": "Set not found"}, status=404)
+        except Exception as e:
+            logging.exception(e)
+            raise
 
 
 # ───────────────────────────────────────────────
@@ -160,15 +164,15 @@ class UnitCohortView(AuthView, APIView):
 
 class SetCohortView(AuthView, APIView):
     def post(self, request, *args, **kwargs):
-        unit_id = kwargs.get("unit_id")
+        set_id = kwargs.get("set_id")
         try:
-            unit = UnitModel.objects.get(pk=unit_id, user=request.user)
+            set = ModelSet.objects.get(pk=set_id, user=request.user)
         except UnitModel.DoesNotExist:
             return Response({"error": "Unit not found"}, status=404)
 
-        data = UnitModelSerializer(unit).data
+        data = ModelSetReadSerializer(set).data
         try:
-            return unit_handlers.unit_count_cohort(data=data)
+            return set_handlers.set_count_cohort(data=data)
         except Exception as e:
             logging.exception(f"Error generating plot: {e}")
             return Response({"error": "Error while generating plot"}, status=400)
