@@ -1,0 +1,69 @@
+{
+    "version": "1.0",
+    "project": "investment_platform",
+    "default_fields": [
+        "event",
+        "timestamp",
+        "user_id",
+        "source",
+        "context"
+    ],
+    "events": {
+        "user_registered": {
+            "description": "Пользователь зарегистрировался",
+            "required_fields": ["registration_method", "user_segment", "referral_source"]
+        },
+        "user_logged_in": {
+            "description": "Пользователь вошёл в систему",
+            "required_fields": ["login_method", "device_type", "location"]
+        },
+        "user_profile_updated": {
+            "description": "Изменение данных в профиле",
+            "required_fields": ["fields_updated"]
+        },
+        "portfolio_balance_updated": {
+            "description": "Обновление баланса инвестиционного портфеля",
+            "required_fields": ["balance_total", "balance_cash", "balance_stocks", "balance_bonds"]
+        },
+        "investment_created": {
+            "description": "Пополнение инвестиционного счёта или сделка",
+            "required_fields": ["amount", "currency", "asset_type", "strategy"]
+        },
+        "investment_withdrawn": {
+            "description": "Вывод средств с инвестиционного счёта",
+            "required_fields": ["amount", "method", "reason"]
+        },
+        "clicked_banner": {
+            "description": "Клик по рекламному или продуктового баннеру",
+            "required_fields": ["banner_id", "page", "experiment_id"]
+        },
+        "viewed_page": {
+            "description": "Просмотр страницы",
+            "required_fields": ["page", "duration", "scroll_depth"]
+        },
+        "unit_economics_calculated": {
+            "description": "Пользователь рассчитал unit-экономику",
+            "required_fields": ["unit_id", "input_data", "calculated_fields", "result_ltv", "result_bep"]
+        },
+        "telegram_command_invoked": {
+            "description": "Пользователь вызвал команду Telegram-бота",
+            "required_fields": ["command", "user_id", "context"]
+        },
+        "api_error": {
+            "description": "Ошибка на бэке",
+            "required_fields": ["endpoint", "status_code", "error_message"]
+        },
+        "kafka_produce_failed": {
+            "description": "Ошибка продюсера Kafka",
+            "required_fields": ["topic", "payload_summary", "error_message"]
+        },
+        "login_failed": {
+            "description": "Неудачная попытка входа",
+            "required_fields": ["login_method", "ip_address", "reason"]
+        },
+        "user_churned": {
+            "description": "Пользователь перестал быть активным",
+            "required_fields": ["last_active_ts", "churn_reason"]
+        }
+    }
+}

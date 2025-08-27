@@ -54,3 +54,9 @@ class Cohort(StatesGroup):
     handle_unit = State()
     retention_rate = State()
     audience_growth_rate = State()
+
+
+class SetCohort(StatesGroup):
+    handle_unit = State()
+    retention_rate = State()
+    audience_growth_rate = State()

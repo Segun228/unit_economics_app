@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "api",
     "users",
     "analitics",
+    "kafka_producer",
     'drf_spectacular',
     'drf_spectacular_sidecar',
     "rest_framework",

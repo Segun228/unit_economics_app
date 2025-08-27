@@ -83,6 +83,7 @@ def set_generate_report(data):
 def process_dataframe_cohort(data:pd.DataFrame):
     try:
         result = data
+        print(result.columns)
         if result is None:
             raise ValueError("Error while calculating economics")
         else:
@@ -178,12 +179,13 @@ def get_xlsx_multiple_report(data:list):
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
             for ind, model in enumerate(data, start=1):
+                name = model.loc[0, "name"]
                 model.to_excel(
                     writer,
                     index=False,
-                    sheet_name= model.get("name", f"Model {ind}")
+                    sheet_name= name
                 )
-                worksheet = writer.sheets[f"Model {ind}"]
+                worksheet = writer.sheets[name]
                 header_font = Font(bold=True)
                 for col_num, column_title in enumerate(model.columns, 1):
                     cell = worksheet.cell(row=1, column=col_num)
@@ -200,7 +202,8 @@ def get_xlsx_multiple_report(data:list):
         raise
 
 
-def build_comparison_plots(dataframes: list[pd.DataFrame]) -> list[io.BytesIO]:
+
+def build_comparison_plots(dataframes: list) -> list[io.BytesIO]:
     """
     Принимает список датафреймов и строит сравнительные графики:
     1. График прибыли
@@ -211,38 +214,31 @@ def build_comparison_plots(dataframes: list[pd.DataFrame]) -> list[io.BytesIO]:
     """
     images = []
 
-    metrics = [
-        ("Profit", "График маржинальной прибыли", "Прибыль"),
-        ("Ballance", "График балланса", "Балланс"),
-        ("total users", "График аудитории", "Аудитория")
-    ]
+    metrics = {
+        "Profit": ("График маржинальной прибыли", "Прибыль"),
+        "Ballance": ("График баланса", "Баланс"),
+        "total users": ("График аудитории", "Аудитория"),
+    }
 
-    for column_name, plot_title, y_label in metrics:
-        combined_df = pd.DataFrame()
+    for metric, (title, y_label) in metrics.items():
+        fig, ax = plt.subplots(figsize=(10, 6), constrained_layout=True)
 
-        for idx, df in enumerate(dataframes):
-            temp_df = pd.DataFrame({
-                "Период": list(range(len(df[column_name]))),
-                y_label: df[column_name].tolist(),
-                "Источник": f"DF_{idx+1}"  # Название серии
-            })
-            combined_df = pd.concat([combined_df, temp_df], ignore_index=True)
+        for i, df in enumerate(dataframes):
+            if metric not in df.columns:
+                continue  
 
-        fig, ax = plt.subplots(figsize=(10, 6))
-        sns.lineplot(
-            data=combined_df,
-            x="Период",
-            y=y_label,
-            hue="Источник",
-            marker="o",
-            ax=ax
-        )
+            data = df[metric].tolist()
+            name = df.loc[0, "name"]
+            x = list(range(len(data)))
+            ax.plot(x, data, marker='.', label=name)
 
-        ax.set_title(plot_title)
+        ax.set_title(title)
         ax.set_xlabel("Период")
         ax.set_ylabel(y_label)
         ax.grid(True)
         ax.axhline(0, color='black', linewidth=0.5)
+        ax.axvline(0, color='black', linewidth=0.5)
+        ax.legend()
 
         image_buf = io.BytesIO()
         fig.savefig(image_buf, format='png', dpi=300, bbox_inches='tight')
@@ -253,6 +249,53 @@ def build_comparison_plots(dataframes: list[pd.DataFrame]) -> list[io.BytesIO]:
     return images
 
 
+
+def unit_calculate_raw_economics(data):
+    """
+    обработка данных юнита для создания отчета без удаления полей
+    """
+    try:
+        df = pd.DataFrame([data])
+        df["Unit"] = "User"
+        df["C1"] = df["customers"] / df["users"]
+        df["ARPC"] = df["AVP"] * df["APC"]
+        df["ARPU"] = df["ARPC"] * df["C1"]
+        df["CPA"] = df["TMS"] / df["users"]
+        df["CAC"] = df["TMS"] / df["customers"]
+        df["CLTV"] = (df["AVP"] - df["COGS"]) * df["APC"] - df["COGS1s"]
+        df["LTV"] = df["CLTV"] * df["C1"]
+        df["ROI"] = (df["LTV"] - df["CPA"]) / df["CPA"] * 100
+        df["UCM"] = df["LTV"] - df["CPA"]
+        df["CCM"] = df["CLTV"] - df["CAC"]
+
+
+        df["Profitable"] = df["UCM"] > 0
+
+        df["Revenue"] = df["ARPU"] * df["users"]
+        df["Gross_profit"] = df["CLTV"] * df["customers"]
+        df["Margin"] = df["Gross_profit"] - df["TMS"]
+
+        def calculate_required_bep(row: pd.Series):
+            ucm = row.get("UCM", 0)
+            if ucm > 0:
+                return row.get("FC", 0) / ucm
+            return None
+
+        df["Required_units_to_BEP"] = df.apply(calculate_required_bep, axis=1)
+
+        df["BEP"] = df["Required_units_to_BEP"] * df["UCM"]
+        df["Profit"] = df["Margin"] - df["FC"]
+
+        float_cols = df.select_dtypes(include='float').columns
+        df[float_cols] = df[float_cols].round(4)
+
+        df.replace([np.inf, -np.inf, np.nan], 0, inplace=True)
+        df = df.infer_objects(copy=False)
+        df = df.where(pd.notnull(df), None)
+        return df
+    except Exception as e:
+        logging.error(f"Ошибка в unit_calculate_economics: {e}")
+        return None
 
 
 def set_count_cohort(data):
@@ -265,12 +308,10 @@ def set_count_cohort(data):
             raise ValueError("Empty or invalid 'units' list")
         for i, unit in enumerate(units, start=1):
             try:
-                result = unit_calculate_economics(unit)
+                result = unit_calculate_raw_economics(unit)
                 if result is not None:
-                    result = result[0]
-                    df_unit = pd.DataFrame([result])  
-                    df_unit["Unit"] = unit.get("name", f"Unit_{i}") 
-                    calculated_units.append(df_unit)
+                    result["Unit"] = unit.get("name", f"Unit_{i}") 
+                    calculated_units.append(result)
                 else:
                     errors.append({"index": i, "error": "Calculation returned None"})
             except Exception as e:

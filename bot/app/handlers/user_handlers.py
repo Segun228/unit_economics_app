@@ -17,7 +17,7 @@ from aiogram.types import InputFile
 
 from app.keyboards import inline_user as inline_keyboards
 
-from app.states.states import Unit, Set, Send, File, UnitEdit, Cohort
+from app.states.states import Unit, Set, Send, File, UnitEdit, Cohort, SetCohort
 
 from aiogram.types import BufferedInputFile
 
@@ -28,7 +28,7 @@ from app.filters.IsAdmin import IsAdmin
 
 from app.requests.user.login import login
 from app.requests.helpers.get_cat_error import get_cat_error_async
-from app.requests.get.get_sets import get_sets
+from app.requests.get.get_sets import get_sets, retrieve_set
 from app.requests.get.get_post import get_post
 
 from app.requests.helpers.get_cat_error import get_cat_error_async
@@ -51,6 +51,7 @@ from app.requests.units.get_unit_cohort import get_unit_cohort
 
 from app.requests.sets.set_generate_report import set_generate_report
 from app.requests.sets.set_visualize import set_visualize
+from app.requests.sets.get_set_cohort import get_set_cohort
 #===========================================================================================================================
 # Конфигурация основных маршрутов
 #===========================================================================================================================
@@ -1225,15 +1226,14 @@ async def set_generate_xlsx_report_callback(callback: CallbackQuery, state: FSMC
 # Сет когортный анализ
 #===========================================================================================================================
 
-@router.callback_query(F.data.startswith("cohort_analisis_"))
-async def start_cohort_analisis(callback: CallbackQuery, state: FSMContext, bot:Bot):
+@router.callback_query(F.data.startswith("cohort_set"))
+async def start_set_cohort_analisis(callback: CallbackQuery, state: FSMContext, bot:Bot):
     try:
         await state.clear()
-        set_id, model_id = callback.data.split("_")[2:]
+        set_id = int(callback.data.split("_")[2])
         await callback.answer()
-        await state.set_state(Cohort.handle_unit)
+        await state.set_state(SetCohort.handle_unit)
         await state.update_data(set_id = set_id)
-        await state.update_data(model_id = model_id)
 
         """
         analysis = await get_unit_report.get_unit_report(
@@ -1249,21 +1249,22 @@ async def start_cohort_analisis(callback: CallbackQuery, state: FSMContext, bot:
             return
         analysis = analysis[0]
         """
+        await callback.message.answer("Для коректности рузельтатов используется принцип ceteris paribus, параметры будут применены ко всем вложенным моделям")
         await callback.message.answer("Введите процент сохранения аудитории (retention rate, %)")
     except Exception as e:
         logging.error(e)
         await callback.message.answer("Возникла ошибка при анализе", reply_markup= inline_keyboards.main)
 
 
-@router.message(Cohort.handle_unit)
-async def continue_cohort_analisis(message:Message, state: FSMContext, bot:Bot):
+@router.message(SetCohort.handle_unit)
+async def continue_set_cohort_analisis(message:Message, state: FSMContext, bot:Bot):
     retention = message.text
     try:
         if not retention:
             raise ValueError("Invalid retention rate given")
         retention = float(retention)
         await state.update_data(retention = retention)
-        await state.set_state(Cohort.retention_rate)
+        await state.set_state(SetCohort.retention_rate)
         await message.answer("Введите ожидаемый месячный прирост аудитории (audience growth rate, %)")
 
     except Exception as e:
@@ -1272,8 +1273,8 @@ async def continue_cohort_analisis(message:Message, state: FSMContext, bot:Bot):
         raise
 
 
-@router.message(Cohort.retention_rate)
-async def finish_cohort_analisis(message:Message, state: FSMContext, bot:Bot):
+@router.message(SetCohort.retention_rate)
+async def finish_set_cohort_analisis(message:Message, state: FSMContext, bot:Bot):
     growth = message.text
     try:
         if not growth:
@@ -1281,22 +1282,31 @@ async def finish_cohort_analisis(message:Message, state: FSMContext, bot:Bot):
         growth = float(growth)
         data = await state.get_data()
         set_id = data.get("set_id")
-        model_id = data.get("model_id")
         retention = data.get("retention")
         await state.clear()
-        result = await update_model_cohort_data.update_model_cohort_data(
-            telegram_id=message.from_user.id,
-            set_id = set_id,
-            model_id = model_id,
-            retention = retention,
-            growth = growth
-        )
-        if not result:
-            raise Exception("Error while patching model")
-        
-        zip_buf = await get_unit_cohort(
+        set_data = await retrieve_set(
             telegram_id= message.from_user.id,
-            unit_id= model_id
+            set_id= set_id
+        )
+        if not set_data:
+            raise ValueError("No set data provided")
+        models = set_data.get("units")
+        if not models:
+            raise ValueError("Error receiving models")
+        for model in models:
+            result = await update_model_cohort_data.update_model_cohort_data(
+                telegram_id=message.from_user.id,
+                set_id = set_id,
+                model_id = model.get("id"),
+                retention = retention,
+                growth = growth
+            )
+            if not result:
+                raise Exception("Error while patching model")
+
+        zip_buf = await get_set_cohort(
+            telegram_id= message.from_user.id,
+            set_id=set_id
         )
         if not zip_buf:
             raise Exception("Error while getting report from the server")

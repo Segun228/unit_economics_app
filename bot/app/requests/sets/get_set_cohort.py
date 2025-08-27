@@ -8,9 +8,9 @@ from pprint import pprint
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-async def get_unit_cohort( 
+async def get_set_cohort( 
         telegram_id, 
-        unit_id
+        set_id
     ):
     load_dotenv()
     base_url = os.getenv("BASE_URL")
@@ -26,7 +26,7 @@ async def get_unit_cohort(
         headers = {
             "Authorization": f"Bot {telegram_id}",
         }
-        exact_url = f"{base_url}analitics/cohort/unit/{unit_id}/" 
+        exact_url = f"{base_url}analitics/cohort/set/{set_id}/" 
         logging.debug(f"Sending to {exact_url}")
         async with session.post(
             exact_url, 

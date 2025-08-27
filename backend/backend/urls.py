@@ -10,6 +10,7 @@ from api.urls import urlpatterns as api_urls
 from analitics.urls import urlpatterns as analitics_urls
 
 
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include(api_urls), name="api-endpoint-group"),
