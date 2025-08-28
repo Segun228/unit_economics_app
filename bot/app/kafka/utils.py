@@ -12,8 +12,8 @@ from kafka.errors import TopicAlreadyExistsError
 
 KAFKA_BROKER_DOCKER = "kafka_unit_economics:9092"
 KAFKA_BROKER_URL = "localhost:29092"
-KAFKA_TOPIC = "logs_topic"
-PRODUCER_CLIENT_ID = "django_backend_producer"
+KAFKA_TOPIC = "bot_logs_topic"
+PRODUCER_CLIENT_ID = "django_bot_producer"
 
 
 
@@ -56,35 +56,26 @@ def get_producer():
 
 
 def build_log_message(
-    user_id,
-    is_authenticated,
     telegram_id,
     action,
-    response_code = 200,
-    request_method = "GET",
-    request_body=None,
-    platform = "backend",
+    source,
+    payload = None,
+    platform = "bot",
     level="INFO",
-    source="backend",
     env="prod",
     timestamp=None
 ):
     message = {
         "timestamp": timestamp or datetime.now(timezone.utc).isoformat(),
         "trace_id": str(uuid.uuid4()),
-        "user_id": user_id,
-        "is_authenticated": is_authenticated,
         "telegram_id": telegram_id,
         "platform": platform,
         "action": action,
-        "request_method": request_method,
-        "request_body": request_body,
-        "response_code": response_code,
         "level": level,
         "event_type": action,
         "source": source,
         "env": env,
-        "message": f"User {user_id} performed {action}"
+        "message": f"User {telegram_id} performed {action}"
     }
 
     return send_to_kafka(message)
@@ -118,12 +109,15 @@ def send_to_kafka(data):
             producer.send(KAFKA_TOPIC, value=serialized)
 
         producer.flush()
-        return {
+        res = {
             "status": "ok",
             "code": 200,
             "messages_sent": len(messages),
             "sample": messages[0] if messages else None,
         }
+        logging.debug(res)
+        logging.info("Logged to Kafka successfully!")
+        return res
 
     except Exception as e:
         logging.exception(f"[Kafka] Ошибка отправки: {e}")

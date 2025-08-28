@@ -42,6 +42,7 @@ from app.requests.user.make_admin import make_admin
 from app.requests.files.get_report import get_report
 from app.requests.files.put_report import put_report
 
+from app.kafka.utils import build_log_message
 #===========================================================================================================================
 # Конфигурация основных маршрутов
 #===========================================================================================================================
@@ -59,6 +60,12 @@ async def cmd_start_admin(message: Message, state: FSMContext):
     await message.answer("Я ваш персональный финансист. Я помогу вам рассчитать юнит-экономику вашего стартапа, выбрать прибыльную стратугию, а также составить визуализацию и отчетность (чтоб инвесторы вас не съели)")
     await message.answer("Сейчас ты можешь создавать, удалять и изменять как наборы моделей (программы), так и отдельные модели юнит-экономики")
     await message.answer("Я много что умею 👇", reply_markup=inline_keyboards.main)
+    build_log_message(
+        telegram_id=message.from_user.id,
+        action="command",
+        source="command",
+        payload="start"
+    )
     await state.clear()
 
 
@@ -74,6 +81,12 @@ async def callback_start_admin(callback: CallbackQuery, state: FSMContext):
     await callback.message.reply("Привет, админ! 👋")
     await callback.message.answer("Я ваш персональный финансист. Я помогу вам рассчитать юнит-экономику вашего стартапа, выбрать прибыльную стратугию, а также составить визуализацию и отчетность (чтоб инвесторы вас не съели)")
     await callback.message.answer("Я много что умею 👇", reply_markup=inline_keyboards.main)
+    build_log_message(
+        telegram_id=callback.from_user.id,
+        action="inline",
+        source="callback",
+        payload="restart"
+    )
     await callback.answer()
 
 

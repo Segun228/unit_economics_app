@@ -14,6 +14,7 @@ class User(AbstractUser):
         blank=True,
         null=True,
     )
+    test_group = models.IntegerField(null=True, default=0)
     def __str__(self):
         return self.username
 

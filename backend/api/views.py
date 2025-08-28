@@ -19,9 +19,11 @@ from kafka_producer.utils import build_log_message
 from rest_framework.response import Response
 from rest_framework import mixins, generics
 
+from django.core.cache import cache
 
+from django.core.cache import cache
 
-class LoggingRetrieveUpdateDestroyAPIView(
+class LoggingRetrieveUpdateDestroySetAPIView(
     mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
     mixins.DestroyModelMixin,
@@ -46,26 +48,26 @@ class LoggingRetrieveUpdateDestroyAPIView(
 
     def retrieve(self, request, *args, **kwargs):
         response = super().retrieve(request, *args, **kwargs)
-        self.log_crud_action(request, response, "retrieve")
+        self.log_crud_action(request, response, "retrieve_set")
         return response
 
     def update(self, request, *args, **kwargs):
         response = super().update(request, *args, **kwargs)
-        self.log_crud_action(request, response, "update")
+        self.log_crud_action(request, response, "update_set")
         return response
 
     def partial_update(self, request, *args, **kwargs):
         response = super().partial_update(request, *args, **kwargs)
-        self.log_crud_action(request, response, "partial_update")
+        self.log_crud_action(request, response, "partial_update_set")
         return response
 
     def destroy(self, request, *args, **kwargs):
         response = super().destroy(request, *args, **kwargs)
-        self.log_crud_action(request, response, "destroy")
+        self.log_crud_action(request, response, "destroy_set")
         return response
 
 
-class LoggingListCreateAPIView(mixins.ListModelMixin,
+class LoggingListCreateSetAPIView(mixins.ListModelMixin,
                               mixins.CreateModelMixin,
                               generics.GenericAPIView):
     """
@@ -80,21 +82,99 @@ class LoggingListCreateAPIView(mixins.ListModelMixin,
                 action=action,
                 request_method=request.method,
                 response_code=response.status_code,
-                request_body=serializer.validated_data if serializer else request.data,
+                request_body=request.data,
             )
         except Exception as e:
             logging.error(f"Failed to log action {action}: {e}")
 
     def get(self, request, *args, **kwargs):
         response = super().list(request, *args, **kwargs)
-        self.log_crud_action(request, response, action="list")
+        self.log_crud_action(request, response, action="list_set")
         return response
 
     def post(self, request, *args, **kwargs):
         response = super().create(request, *args, **kwargs)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=False)
-        self.log_crud_action(request, response, serializer=serializer, action="create")
+        self.log_crud_action(request, response, serializer=serializer, action="create_set")
+        return response
+
+
+
+class LoggingRetrieveUpdateDestroyModelAPIView(
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+    generics.GenericAPIView
+):
+    """
+    View с логированием CRUD операций.
+    """
+    def log_crud_action(self, request, response, action):
+        try:
+            build_log_message(
+                is_authenticated=request.user.is_authenticated,
+                telegram_id=request.user.telegram_id,
+                user_id=request.user.id,
+                action=action,
+                request_method=request.method,
+                response_code=response.status_code,
+                request_body=getattr(request, "data", None),
+            )
+        except Exception as e:
+            logging.error(f"Failed to log action {action}: {e}")
+
+    def retrieve(self, request, *args, **kwargs):
+        response = super().retrieve(request, *args, **kwargs)
+        self.log_crud_action(request, response, "retrieve_model")
+        return response
+
+    def update(self, request, *args, **kwargs):
+        response = super().update(request, *args, **kwargs)
+        self.log_crud_action(request, response, "update_model")
+        return response
+
+    def partial_update(self, request, *args, **kwargs):
+        response = super().partial_update(request, *args, **kwargs)
+        self.log_crud_action(request, response, "partial_update_model")
+        return response
+
+    def destroy(self, request, *args, **kwargs):
+        response = super().destroy(request, *args, **kwargs)
+        self.log_crud_action(request, response, "destroy_model")
+        return response
+
+
+class LoggingListCreateModelAPIView(mixins.ListModelMixin,
+                              mixins.CreateModelMixin,
+                              generics.GenericAPIView):
+    """
+    List or create view with logging
+    """
+    def log_crud_action(self, request, response, action, serializer=None):
+        try:
+            build_log_message(
+                is_authenticated=request.user.is_authenticated,
+                telegram_id=getattr(request.user, "telegram_id", None),
+                user_id=request.user.id,
+                action=action,
+                request_method=request.method,
+                response_code=response.status_code,
+                request_body=request.data,
+            )
+        except Exception as e:
+            logging.error(f"Failed to log action {action}: {e}")
+
+    def get(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        self.log_crud_action(request, response, action="list_model")
+        return response
+
+    def post(self, request, *args, **kwargs):
+        response = super().create(request, *args, **kwargs)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=False)
+        self.log_crud_action(request, response, serializer=serializer, action="create_model")
         return response
 
 
@@ -120,7 +200,7 @@ class ListCreateModelSetView(AuthenticatedAPIView, ListCreateAPIView):
                 user_id= self.request.user.id,
                 is_authenticated= self.request.user.is_authenticated,
                 telegram_id= self.request.user.telegram_id,
-                action= "create",
+                action= "create set",
                 request_body= serializer.validated_data,
                 request_method= "POST",
                 response_code=201,
@@ -145,7 +225,7 @@ class ListCreateModelSetView(AuthenticatedAPIView, ListCreateAPIView):
                 user_id= self.request.user.id,
                 is_authenticated= self.request.user.is_authenticated,
                 telegram_id= self.request.user.telegram_id,
-                action= "sets listed",
+                action= "list set",
                 request_body= serializer.data,
                 request_method= "GET",
                 response_code=200,
@@ -157,7 +237,7 @@ class ListCreateModelSetView(AuthenticatedAPIView, ListCreateAPIView):
         return Response(serializer.data)
 
 
-class RetrieveUpdateDestroyModelSetView(AuthenticatedAPIView, LoggingRetrieveUpdateDestroyAPIView):
+class RetrieveUpdateDestroyModelSetView(AuthenticatedAPIView, LoggingRetrieveUpdateDestroyModelAPIView):
     lookup_field = 'id'
     lookup_url_kwarg = 'set_id'
 
@@ -171,7 +251,7 @@ class RetrieveUpdateDestroyModelSetView(AuthenticatedAPIView, LoggingRetrieveUpd
 
 
 
-class ListCreateUnitModelView(ListCreateAPIView):
+class ListCreateUnitModelView(AuthenticatedAPIView, LoggingListCreateModelAPIView):
     authentication_classes = [TelegramAuthentication]
     permission_classes = [IsAuthenticated]
     serializer_class = UnitModelSerializer
@@ -185,7 +265,7 @@ class ListCreateUnitModelView(ListCreateAPIView):
         model_set = get_object_or_404(ModelSet, id=set_id, user=self.request.user)
         serializer.save(user=self.request.user, model_set=model_set)
 
-class RetrieveUpdateDestroyUnitModelView(AuthenticatedAPIView, RetrieveUpdateDestroyAPIView):
+class RetrieveUpdateDestroyUnitModelView(AuthenticatedAPIView, LoggingRetrieveUpdateDestroyModelAPIView):
     lookup_field = 'id'
     lookup_url_kwarg = 'unit_id'
     serializer_class = UnitModelSerializer

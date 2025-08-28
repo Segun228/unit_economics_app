@@ -12,6 +12,8 @@ from dotenv import load_dotenv
 import app.handlers.admin_handlers
 import app.handlers.admin_handlers
 
+from app.kafka.utils import ensure_topic_exists
+
 load_dotenv()
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
@@ -32,6 +34,7 @@ if not BOT_TOKEN:
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 dp.message.middleware(ThrottlingMiddleware(limit=0.5))
+ensure_topic_exists()
 dp.include_router(admin_router)
 dp.include_router(user_router)
 

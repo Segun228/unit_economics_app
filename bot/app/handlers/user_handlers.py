@@ -52,6 +52,8 @@ from app.requests.units.get_unit_cohort import get_unit_cohort
 from app.requests.sets.set_generate_report import set_generate_report
 from app.requests.sets.set_visualize import set_visualize
 from app.requests.sets.get_set_cohort import get_set_cohort
+
+from app.kafka.utils import build_log_message
 #===========================================================================================================================
 # Конфигурация основных маршрутов
 #===========================================================================================================================
@@ -70,6 +72,12 @@ async def cmd_start_admin(message: Message, state: FSMContext):
     await message.answer("Сейчас ты можешь создавать, удалять и изменять как наборы моделей (программы), так и отдельные модели юнит-экономики")
     await message.answer("Я много что умею 👇", reply_markup=inline_keyboards.main)
     await state.clear()
+    build_log_message(
+        telegram_id=message.from_user.id,
+        action="command",
+        source="command",
+        payload="start"
+    )
 
 
 @router.callback_query(F.data == "restart")
@@ -85,25 +93,54 @@ async def callback_start_admin(callback: CallbackQuery, state: FSMContext):
     await callback.message.answer("Я ваш персональный финансист. Я помогу вам рассчитать юнит-экономику вашего стартапа, выбрать прибыльную стратугию, а также составить визуализацию и отчетность (чтоб инвесторы вас не съели)")
     await callback.message.answer("Я много что умею 👇", reply_markup=inline_keyboards.main)
     await callback.answer()
-
+    build_log_message(
+        telegram_id=callback.from_user.id,
+        action="callback",
+        source="inline",
+        payload="restart"
+    )
 
 @router.message(Command("help"))
 async def cmd_help(message: Message):
+    build_log_message(
+        telegram_id=message.from_user.id,
+        action="command",
+        source="command",
+        payload="help"
+    )
     await message.reply(text="Этот бот помогает рассчитывать юнит экономику, подбирать метрики для заданной прибыли или окупаемости, а также проссчитывать необходимое кол-во юнитов и точку безубыточности\n\n Он может выполнять несколько интересных функций \n\nВы можете выбирать интересующие вас функции, в каждой из них вам будут предоставлены инструкции\n\nЕсли у вас остались вопросы, звоните нам или пишите в тех поддержку, мы всегда на связи:\n\nтелефон коммерческого агента\n\n@dianabol_metandienon_enjoyer", reply_markup=inline_keyboards.home)
 
 @router.message(Command("contacts"))
 async def cmd_contacts(message: Message):
-    text = "Связь с менеджером: 📞\n\n\\тут телефон коммерческого агента\n\n"+"Связь с разрабом: 📞\n\n\\@dianabol\\_metandienon\\_enjoyer 🤝"
+    build_log_message(
+        telegram_id=message.from_user.id,
+        action="command",
+        source="command",
+        payload="contacts"
+    )
+    text = "Связь с менеджером: 📞\n\n\\тут телефон коммерческого агента\n\n"+"Связь с разрабом: 📞\n\n\\@dianabol\\_metandienon\\_енjoyer 🤝"
     await message.reply(text=text, reply_markup=inline_keyboards.home, parse_mode='MarkdownV2')
 
 @router.callback_query(F.data == "contacts")
 async def contacts_callback(callback: CallbackQuery):
+    build_log_message(
+        telegram_id=callback.from_user.id,
+        action="callback",
+        source="menu",
+        payload="contacts"
+    )
     text = "Связь с менеджером: 📞\n\n\\тут телефон коммерческого агента\n\n"+"Связь с разрабом: 📞\n\n\\@dianabol\\_metandienon\\_enjoyer 🤝"
     await callback.message.edit_text(text=text, reply_markup=inline_keyboards.home, parse_mode='MarkdownV2')
     await callback.answer()
 
 @router.callback_query(F.data == "main_menu")
 async def main_menu_callback(callback: CallbackQuery):
+    build_log_message(
+        telegram_id=callback.from_user.id,
+        action="callback",
+        source="menu",
+        payload="main_menu"
+    )
     await callback.message.answer("Я много что умею 👇", reply_markup=inline_keyboards.main)
     await callback.answer()
 
@@ -112,6 +149,12 @@ async def main_menu_callback(callback: CallbackQuery):
 #===========================================================================================================================
 @router.callback_query(F.data == "catalogue")
 async def catalogue_callback_admin(callback: CallbackQuery):
+    build_log_message(
+        telegram_id=callback.from_user.id,
+        action="callback",
+        source="menu",
+        payload="catalogue"
+    )
     categories = await get_sets(telegram_id=callback.from_user.id)
     await callback.message.answer("Вот доступные проекты (наборы моделей экономики)👇", reply_markup= await get_catalogue(categories=categories, telegram_id=callback.from_user.id))
     await callback.answer()
@@ -121,6 +164,12 @@ async def catalogue_callback_admin(callback: CallbackQuery):
 async def category_catalogue_callback_admin(callback: CallbackQuery):
     await callback.answer()
     category_id = callback.data.split("_")[1]
+    build_log_message(
+        telegram_id=callback.from_user.id,
+        action="callback",
+        source="menu",
+        payload=f"category_{category_id}"
+    )
     categories = await get_sets(telegram_id=callback.from_user.id)
     current_category = None
     if categories is not None:
@@ -141,6 +190,12 @@ async def post_catalogue_callback_admin(callback: CallbackQuery):
     await callback.answer()
     post_id = callback.data.split("_")[2]
     category_id = callback.data.split("_")[1]
+    build_log_message(
+        telegram_id=callback.from_user.id,
+        action="callback",
+        source="menu",
+        payload=f"post_{post_id}"
+    )
     post_data = await get_post(
         telegram_id=callback.from_user.id,
         post_id=post_id,
@@ -179,6 +234,12 @@ async def post_catalogue_callback_admin(callback: CallbackQuery):
 
 @router.callback_query(F.data == "create_category")
 async def category_create_callback_admin(callback: CallbackQuery, state: FSMContext):
+    build_log_message(
+        telegram_id=callback.from_user.id,
+        action="callback",
+        source="inline",
+        payload="create_category"
+    )
     await state.clear()
     await callback.message.answer("Введите название набора моделей экономики")
     await state.set_state(Set.handle_set)
@@ -211,6 +272,12 @@ async def category_enter_name_admin(message: Message, state: FSMContext):
 #===========================================================================================================================
 @router.callback_query(F.data.startswith("create_post_"))
 async def post_create_callback_admin(callback: CallbackQuery, state: FSMContext):
+    build_log_message(
+        telegram_id=callback.from_user.id,
+        action="callback",
+        source="inline",
+        payload="create_unit"
+    )
     await callback.answer()
     await state.clear()
     category_id = callback.data.split("_")[2]
@@ -353,6 +420,12 @@ async def post_enter_fc_admin(message: Message, state: FSMContext):
 #===========================================================================================================================
 @router.callback_query(F.data.startswith("edit_category_"))
 async def category_edit_callback_admin(callback: CallbackQuery, state: FSMContext):
+    build_log_message(
+        telegram_id=callback.from_user.id,
+        action="callback",
+        source="inline",
+        payload="edit_set"
+    )
     await callback.answer()
     await state.clear()
     category_id = callback.data.split("_")[2]
@@ -387,6 +460,12 @@ async def category_edit_name_admin(message: Message, state: FSMContext):
 #===========================================================================================================================
 @router.callback_query(F.data.startswith("edit_post_"))
 async def post_edit_callback_admin(callback: CallbackQuery, state: FSMContext):
+    build_log_message(
+        telegram_id=callback.from_user.id,
+        action="callback",
+        source="inline",
+        payload="edit_post"
+    )
     await callback.answer()
     await state.clear()
     category_id, unit_id = callback.data.split("_")[2:]
@@ -550,6 +629,12 @@ async def category_delete_callback_admin(callback: CallbackQuery, state: FSMCont
         return
     await callback.message.answer("Категория удалена!", reply_markup=await get_catalogue(telegram_id = callback.from_user.id))
     await state.clear()
+    build_log_message(
+        telegram_id=callback.from_user.id,
+        action="callback",
+        source="inline",
+        payload="delete_set"
+    )
 
 
 #===========================================================================================================================
@@ -566,7 +651,12 @@ async def post_delete_callback_admin(callback: CallbackQuery, state: FSMContext)
         await callback.message.answer("Извините, не удалось удалить пост",reply_markup= await get_catalogue(telegram_id = callback.from_user.id))
     await callback.message.answer("Пост успешно удален",reply_markup=await get_catalogue(telegram_id = callback.from_user.id))
     await state.clear()
-
+    build_log_message(
+        telegram_id=callback.from_user.id,
+        action="callback",
+        source="inline",
+        payload="delete_post"
+    )
 
 
 #===========================================================================================================================
@@ -642,6 +732,12 @@ async def send_report_admin(callback: CallbackQuery, state: FSMContext, bot: Bot
         reply_markup=inline_keyboards.file_panel
     )
     await state.clear()
+    build_log_message(
+        telegram_id=callback.from_user.id,
+        action="callback",
+        source="inline",
+        payload="get_xlsx"
+    )
 
 
 
@@ -663,6 +759,13 @@ async def file_add_posts_admin(callback: CallbackQuery, state: FSMContext, bot:B
         "Введите имя новой категории"
     )
     await state.set_state(File.waiting_for_name)
+    build_log_message(
+        telegram_id=callback.from_user.id,
+        action="callback",
+        source="inline",
+        payload="post_xlsx"
+    )
+
 
 @router.message(File.waiting_for_name)
 async def upload_file_admin(message: Message, state: FSMContext, bot: Bot):
@@ -670,6 +773,7 @@ async def upload_file_admin(message: Message, state: FSMContext, bot: Bot):
     await state.update_data(name = name)
     await state.set_state(File.waiting_for_file)
     await message.answer("Отправте боту файл")
+
 
 @router.message(File.waiting_for_file)
 async def upload_add_file_admin(message: Message, state: FSMContext, bot: Bot):
@@ -716,7 +820,12 @@ async def analyse_unit_menu(callback: CallbackQuery, state: FSMContext, bot:Bot)
     except Exception as e:
         logging.error(e)
         await callback.message.answer("Не удалось загрузить аналитический интерфейс, извините", reply_markup= inline_keyboards.main)
-
+    build_log_message(
+        telegram_id=callback.from_user.id,
+        action="callback",
+        source="inline",
+        payload="analize_unit_menu"
+    )
 
 def escape_md_v2(text: str) -> str:
     if text is None:
@@ -819,6 +928,12 @@ async def count_unit_economics(callback: CallbackQuery, state: FSMContext, bot:B
         await callback.message.answer("Извините, не удалось провести анализ модели", reply_markup= inline_keyboards.main)
     finally:
         await state.clear()
+    build_log_message(
+        telegram_id=callback.from_user.id,
+        action="callback",
+        source="inline",
+        payload="count_unit_economics"
+    )
 #==============================================================================================================================================================================================
 # Count unit BEP
 #==============================================================================================================================================================================================
@@ -901,6 +1016,12 @@ async def count_unit_bep(callback: CallbackQuery, state: FSMContext, bot:Bot):
         await callback.message.answer("Извините, не удалось посчитать точку безубыточности", reply_markup= inline_keyboards.main)
     finally:
         await state.clear()
+    build_log_message(
+        telegram_id=callback.from_user.id,
+        action="callback",
+        source="inline",
+        payload="count_unit_bep"
+    )
 
 #==============================================================================================================================================================================================
 # Generate unit report
@@ -952,6 +1073,12 @@ async def generate_unit_report(callback: CallbackQuery, state: FSMContext, bot:B
         await callback.message.answer("Извините, не удалось посчитать точку безубыточности", reply_markup= inline_keyboards.main)
     finally:
         await state.clear()
+    build_log_message(
+        telegram_id=callback.from_user.id,
+        action="callback",
+        source="inline",
+        payload="count_bep_unit"
+    )
 
 
 #===========================================================================================================================
@@ -1051,7 +1178,12 @@ async def finish_cohort_analisis(message:Message, state: FSMContext, bot:Bot):
         raise
     finally:
         await state.clear()
-
+    build_log_message(
+        telegram_id=message.from_user.id,
+        action="callback",
+        source="inline",
+        payload="count_unit_cohort"
+    )
 
 #==============================================================================================================================================================================================
 # Set text analisis
@@ -1070,7 +1202,12 @@ async def analyse_set_menu_latest(callback: CallbackQuery, state: FSMContext, bo
     except Exception as e:
         logging.error(e)
         await callback.message.answer("Не удалось загрузить аналитический интерфейс, извините", reply_markup= inline_keyboards.main)
-
+    build_log_message(
+        telegram_id=callback.from_user.id,
+        action="callback",
+        source="inline",
+        payload="analize_set"
+    )
 
 
 def format_model_report(data: dict) -> str:
@@ -1149,7 +1286,12 @@ async def count_set_economics(callback: CallbackQuery, state: FSMContext, bot:Bo
         await callback.message.answer("Извините, не удалось провести анализ модели", reply_markup= inline_keyboards.main)
     finally:
         await state.clear()
-
+    build_log_message(
+        telegram_id=callback.from_user.id,
+        action="callback",
+        source="inline",
+        payload="count_unit_set"
+    )
 
 #===========================================================================================================================
 # Сет визуализация
@@ -1185,7 +1327,12 @@ async def set_visualize_callback(callback: CallbackQuery, state: FSMContext, bot
         raise
     finally:
         await state.clear()
-
+    build_log_message(
+        telegram_id=callback.from_user.id,
+        action="callback",
+        source="inline",
+        payload="visualize_set"
+    )
 #===========================================================================================================================
 # Сет XLSX отчет
 #===========================================================================================================================
@@ -1221,7 +1368,12 @@ async def set_generate_xlsx_report_callback(callback: CallbackQuery, state: FSMC
         raise
     finally:
         await state.clear()
-
+    build_log_message(
+        telegram_id=callback.from_user.id,
+        action="callback",
+        source="inline",
+        payload="generate_report_set"
+    )
 #===========================================================================================================================
 # Сет когортный анализ
 #===========================================================================================================================
@@ -1328,7 +1480,12 @@ async def finish_set_cohort_analisis(message:Message, state: FSMContext, bot:Bot
         raise
     finally:
         await state.clear()
-
+    build_log_message(
+        telegram_id=message.from_user.id,
+        action="callback",
+        source="inline",
+        payload="count_cohort_set"
+    )
 #===========================================================================================================================
 # Заглушка
 #===========================================================================================================================
@@ -1360,7 +1517,12 @@ async def send_post_photos(callback: CallbackQuery, post: Dict[str, Any]):
 
     for photo_id in photo_ids[1:]:
         await callback.message.answer_photo(photo=photo_id)
-
+    build_log_message(
+        telegram_id=callback.from_user.id,
+        action="callback",
+        source="inline",
+        payload="undefined"
+    )
 
 #===========================================================================================================================
 # Отлов неизвестных обработчиков
@@ -1370,3 +1532,9 @@ async def send_post_photos(callback: CallbackQuery, post: Dict[str, Any]):
 async def unknown_callback(callback: CallbackQuery):
     logging.info(f"UNHANDLED CALLBACK: {callback.data}")
     await callback.answer(f"⚠️ Это действие не распознано. Получено: {callback.data}", show_alert=True)
+    build_log_message(
+        telegram_id=callback.from_user.id,
+        action="callback",
+        source="inline",
+        payload="undefined"
+    )

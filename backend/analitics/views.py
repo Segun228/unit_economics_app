@@ -27,6 +27,10 @@ from rest_framework.views import APIView
 
 from django.http import HttpResponse
 
+from kafka_producer.utils import build_log_message
+
+from django.core.cache import cache
+
 
 # ───────────────────────────────────────────────
 # 🔤 TEXT REPORTS
@@ -46,6 +50,15 @@ class UnitTextReportView(AuthView, APIView):
             return Response({"error": "Unit not found"}, status=404)
         data = UnitModelSerializer(unit).data
         result = report_handlers.unit_calculate_economics(data = data)
+        build_log_message(
+            is_authenticated=request.user.is_authenticated,
+            telegram_id=getattr(request.user, "telegram_id", None),
+            user_id=request.user.id,
+            action="unit_text_report",
+            request_method=request.method,
+            response_code=200,
+            request_body= request.data,
+        )
         return Response(result)
 
 
@@ -55,6 +68,15 @@ class SetTextReportView(AuthView, APIView):
         try:
             set = ModelSet.objects.get(pk=set_id, user=request.user)
             data = ModelSetReadSerializer(set).data
+            build_log_message(
+                is_authenticated=request.user.is_authenticated,
+                telegram_id=getattr(request.user, "telegram_id", None),
+                user_id=request.user.id,
+                action="set_text_report",
+                request_method=request.method,
+                response_code=200,
+                request_body= request.data,
+            )
             return report_handlers.set_calculate_economics(data = data)
         except ModelSet.DoesNotExist:
             return Response({"error": "Set not found"}, status=404)
@@ -77,6 +99,15 @@ class UnitExelReportView(AuthView, APIView):
         try:
             data = UnitModelSerializer(unit).data
             result = unit_handlers.unit_generate_report(data=data)
+            build_log_message(
+                is_authenticated=request.user.is_authenticated,
+                telegram_id=getattr(request.user, "telegram_id", None),
+                user_id=request.user.id,
+                action="unit_exel_report",
+                request_method=request.method,
+                response_code=200,
+                request_body= request.data,
+            )
             return result
         except Exception as e:
             logging.exception(e)
@@ -89,6 +120,15 @@ class SetExelReportView(AuthView, APIView):
         try:
             set = ModelSet.objects.get(pk=set_id, user=request.user)
             data = ModelSetReadSerializer(set).data
+            build_log_message(
+                is_authenticated=request.user.is_authenticated,
+                telegram_id=getattr(request.user, "telegram_id", None),
+                user_id=request.user.id,
+                action="set_exel_report",
+                request_method=request.method,
+                response_code=200,
+                request_body= request.data,
+            )
             return set_handlers.set_generate_report(data = data)
         except ModelSet.DoesNotExist:
             return Response({"error": "Set not found"}, status=404)
@@ -109,6 +149,15 @@ class SetImageReportView(AuthView, APIView):
         try:
             set = ModelSet.objects.get(pk=set_id, user=request.user)
             data = ModelSetReadSerializer(set).data
+            build_log_message(
+                is_authenticated=request.user.is_authenticated,
+                telegram_id=getattr(request.user, "telegram_id", None),
+                user_id=request.user.id,
+                action="set_image_report",
+                request_method=request.method,
+                response_code=200,
+                request_body= request.data,
+            )
             return report_handlers.set_visualize(data = data)
         except ModelSet.DoesNotExist:
             return Response({"error": "Set not found"}, status=404)
@@ -137,6 +186,15 @@ class UnitCountBEPView(AuthView, APIView):
             return Response({"error": "Error while generating plot"}, status=400)
 
         if not proc or not buf:
+            build_log_message(
+                is_authenticated=request.user.is_authenticated,
+                telegram_id=getattr(request.user, "telegram_id", None),
+                user_id=request.user.id,
+                action="unit_bep_report",
+                request_method=request.method,
+                response_code=200,
+                request_body= request.data,
+            )
             return Response({"error": "Error while generating plot"}, status=400)
 
         return HttpResponse(buf.getvalue(), content_type='image/png')
@@ -156,6 +214,15 @@ class UnitCohortView(AuthView, APIView):
 
         data = UnitModelSerializer(unit).data
         try:
+            build_log_message(
+                is_authenticated=request.user.is_authenticated,
+                telegram_id=getattr(request.user, "telegram_id", None),
+                user_id=request.user.id,
+                action="unit_cohort_report",
+                request_method=request.method,
+                response_code=200,
+                request_body= request.data,
+            )
             return unit_handlers.unit_count_cohort(data=data)
         except Exception as e:
             logging.exception(f"Error generating plot: {e}")
@@ -172,6 +239,15 @@ class SetCohortView(AuthView, APIView):
 
         data = ModelSetReadSerializer(set).data
         try:
+            build_log_message(
+                is_authenticated=request.user.is_authenticated,
+                telegram_id=getattr(request.user, "telegram_id", None),
+                user_id=request.user.id,
+                action="set_cohort_report",
+                request_method=request.method,
+                response_code=200,
+                request_body= request.data,
+            )
             return set_handlers.set_count_cohort(data=data)
         except Exception as e:
             logging.exception(f"Error generating plot: {e}")
@@ -184,10 +260,19 @@ class SetCohortView(AuthView, APIView):
 class FileUploadView(AuthView, APIView):
     authentication_classes = [TelegramAuthentication]
     permission_classes = [IsAuthenticated]
-
+# TODO 
     def get(self, request, *args, **kwargs):
         units = UnitModel.objects.filter(user = request.user).values()
         sets = ModelSet.objects.filter(user = request.user).values()
+        build_log_message(
+            is_authenticated=request.user.is_authenticated,
+            telegram_id=getattr(request.user, "telegram_id", None),
+            user_id=request.user.id,
+            action="get_db_excel",
+            request_method=request.method,
+            response_code=200,
+            request_body= request.data,
+        )
         return handlers.get_xlsx_report(
             units = units,
             sets = sets
@@ -202,6 +287,15 @@ class FileUploadView(AuthView, APIView):
         if not result:
             return HttpResponseBadRequest()
         if result['errors']:
+            build_log_message(
+                is_authenticated=request.user.is_authenticated,
+                telegram_id=getattr(request.user, "telegram_id", None),
+                user_id=request.user.id,
+                action="post_db_excel",
+                request_method=request.method,
+                response_code=400,
+                request_body= request.data,
+            )
             return Response(
                 {
                     "success": result['success'],
@@ -210,6 +304,15 @@ class FileUploadView(AuthView, APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
         else:
+            build_log_message(
+                is_authenticated=request.user.is_authenticated,
+                telegram_id=getattr(request.user, "telegram_id", None),
+                user_id=request.user.id,
+                action="post_db_excel",
+                request_method=request.method,
+                response_code=200,
+                request_body= request.data,
+            )
             return Response(
                 {"success": result['success']},
                 status=status.HTTP_200_OK
@@ -227,6 +330,15 @@ class GetFileDatabase(AuthView, APIView):
     def get(self, request, *args, **kwargs):
         units = UnitModel.objects.filter(user = request.user).values()
         sets = ModelSet.objects.filter(user = request.user).values()
+        build_log_message(
+            is_authenticated=request.user.is_authenticated,
+            telegram_id=getattr(request.user, "telegram_id", None),
+            user_id=request.user.id,
+            action="get_db_excel",
+            request_method=request.method,
+            response_code=200,
+            request_body= request.data,
+        )
         return handlers.get_xlsx_report(
             units = units,
             sets = sets
