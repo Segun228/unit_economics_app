@@ -31,7 +31,24 @@ from kafka_producer.utils import build_log_message
 
 from django.core.cache import cache
 
+# ───────────────────────────────────────────────
+# CACHED REQUESTS SCHEMA
+# ───────────────────────────────────────────────
+"""
+    f"model_{unit_id}_text_report_user_{request.user.id}" - unit text report
+    f"set_{set_id}_text_report_user_{request.user.id}"
 
+    f"model_{unit_id}_exel_report_user_{request.user.id}" - unit exel report
+    f"set_{set_id}_exel_report_user_{request.user.id}" - set exel report
+
+    f"set_{set_id}_image_report_user_{request.user.id}" - set image report
+    f"model_{unit_id}_bep_report_user_{request.user.id}" - unit bep report
+
+    f"model_{unit_id}_cohort_report_user_{request.user.id}" - unit cohort report
+    f"set_{set_id}_cohort_report_user_{request.user.id}" - set cohort report
+
+    f"db_report_user_{request.user.id}" - database report
+"""
 # ───────────────────────────────────────────────
 # 🔤 TEXT REPORTS
 # ───────────────────────────────────────────────
@@ -43,7 +60,9 @@ class AuthView(APIView):
 class UnitTextReportView(AuthView, APIView):
     def post(self, request, *args, **kwargs):
         unit_id = kwargs.get("unit_id")
-        print("unit_id:", unit_id)
+        cached = cache.get(key=f"model_{unit_id}_text_report_user_{request.user.id}")
+        if cached:
+            return Response(cached)
         try:
             unit = UnitModel.objects.get(pk=unit_id, user=request.user)
         except UnitModel.DoesNotExist:
@@ -59,12 +78,19 @@ class UnitTextReportView(AuthView, APIView):
             response_code=200,
             request_body= request.data,
         )
+        cache.set(
+            key=f"model_{unit_id}_text_report_user_{request.user.id}",
+            value=result
+        )
         return Response(result)
 
 
 class SetTextReportView(AuthView, APIView):
     def post(self, request, *args, **kwargs):
         set_id = kwargs.get("set_id")
+        cached = cache.get(key=f"set_{set_id}_text_report_user_{request.user.id}")
+        if cached:
+            return Response(cached)
         try:
             set = ModelSet.objects.get(pk=set_id, user=request.user)
             data = ModelSetReadSerializer(set).data
@@ -77,12 +103,17 @@ class SetTextReportView(AuthView, APIView):
                 response_code=200,
                 request_body= request.data,
             )
-            return report_handlers.set_calculate_economics(data = data)
+            result = report_handlers.set_calculate_economics(data = data)
+            cache.set(
+                key=f"set_{set_id}_text_report_user_{request.user.id}",
+                value=result.data
+            )
+            return result
         except ModelSet.DoesNotExist:
             return Response({"error": "Set not found"}, status=404)
         except Exception as e:
-            logging.exception(e)
-            raise
+            logging.exception("Error while generating Unit report")
+            return Response({"error": str(e)}, status=500)
 
 
 # ───────────────────────────────────────────────
@@ -92,10 +123,21 @@ class SetTextReportView(AuthView, APIView):
 class UnitExelReportView(AuthView, APIView):
     def post(self, request, *args, **kwargs):
         unit_id = kwargs.get("unit_id")
+        resp = cache.get(
+            key=f"model_{unit_id}_exel_report_user_{request.user.id}"
+        )
         try:
             unit = UnitModel.objects.get(pk=unit_id, user=request.user)
         except UnitModel.DoesNotExist:
             return Response({"error": "Unit not found"}, status=404)
+        if resp:
+            response = HttpResponse(
+                resp,
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            response['Content-Disposition'] = f'attachment; filename={unit.name if unit else "Model"}.xlsx'
+            return response
+
         try:
             data = UnitModelSerializer(unit).data
             result = unit_handlers.unit_generate_report(data=data)
@@ -108,7 +150,11 @@ class UnitExelReportView(AuthView, APIView):
                 response_code=200,
                 request_body= request.data,
             )
-            return result
+            cache.set(
+                key=f"model_{unit_id}_exel_report_user_{request.user.id}",
+                value = result[1]
+            )
+            return result[0]
         except Exception as e:
             logging.exception(e)
             return Response({"error": f"An error occured {e}"}, status=404)
@@ -117,8 +163,18 @@ class UnitExelReportView(AuthView, APIView):
 class SetExelReportView(AuthView, APIView):
     def post(self, request, *args, **kwargs):
         set_id = kwargs.get("set_id")
+        set = ModelSet.objects.get(pk=set_id, user=request.user)
+        resp = cache.get(
+            key=f"set_{set_id}_exel_report_user_{request.user.id}"
+        )
+        if resp:
+            response = HttpResponse(
+                resp,
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            response['Content-Disposition'] = f'attachment; filename={set.name if set else "Set"}.xlsx'
+            return response
         try:
-            set = ModelSet.objects.get(pk=set_id, user=request.user)
             data = ModelSetReadSerializer(set).data
             build_log_message(
                 is_authenticated=request.user.is_authenticated,
@@ -129,7 +185,12 @@ class SetExelReportView(AuthView, APIView):
                 response_code=200,
                 request_body= request.data,
             )
-            return set_handlers.set_generate_report(data = data)
+            result = set_handlers.set_generate_report(data = data)
+            cache.set(
+                key=f"set_{set_id}_exel_report_user_{request.user.id}",
+                value = result[1]
+            )
+            return result[0]
         except ModelSet.DoesNotExist:
             return Response({"error": "Set not found"}, status=404)
         except Exception as e:
@@ -146,6 +207,13 @@ class SetExelReportView(AuthView, APIView):
 class SetImageReportView(AuthView, APIView):
     def post(self, request, *args, **kwargs):
         set_id = kwargs.get("set_id")
+        resp = cache.get(
+            key=f"set_{set_id}_image_report_user_{request.user.id}"
+        )
+        if resp:
+            response = HttpResponse(resp, content_type='application/zip')
+            response['Content-Disposition'] = 'attachment; filename="report_bundle.zip"'
+            return response
         try:
             set = ModelSet.objects.get(pk=set_id, user=request.user)
             data = ModelSetReadSerializer(set).data
@@ -158,7 +226,12 @@ class SetImageReportView(AuthView, APIView):
                 response_code=200,
                 request_body= request.data,
             )
-            return report_handlers.set_visualize(data = data)
+            result = report_handlers.set_visualize(data = data)
+            cache.set(
+                key=f"set_{set_id}_image_report_user_{request.user.id}",
+                value=result[1]
+            )
+            return result[0]
         except ModelSet.DoesNotExist:
             return Response({"error": "Set not found"}, status=404)
         except Exception as e:
@@ -173,11 +246,15 @@ class SetImageReportView(AuthView, APIView):
 class UnitCountBEPView(AuthView, APIView):
     def post(self, request, *args, **kwargs):
         unit_id = kwargs.get("unit_id")
+        resp = cache.get(
+            key=f"model_{unit_id}_bep_report_user_{request.user.id}"
+        )
+        if resp:
+            return HttpResponse(resp, content_type='image/png')
         try:
             unit = UnitModel.objects.get(pk=unit_id, user=request.user)
         except UnitModel.DoesNotExist:
             return Response({"error": "Unit not found"}, status=404)
-
         data = UnitModelSerializer(unit).data
         try:
             proc, buf = unit_handlers.unit_count_bep(data=data)
@@ -196,7 +273,10 @@ class UnitCountBEPView(AuthView, APIView):
                 request_body= request.data,
             )
             return Response({"error": "Error while generating plot"}, status=400)
-
+        cache.set(
+            key=f"model_{unit_id}_bep_report_user_{request.user.id}",
+            value=buf.getvalue()
+        )
         return HttpResponse(buf.getvalue(), content_type='image/png')
 
 
@@ -207,6 +287,11 @@ class UnitCountBEPView(AuthView, APIView):
 class UnitCohortView(AuthView, APIView):
     def post(self, request, *args, **kwargs):
         unit_id = kwargs.get("unit_id")
+        resp = cache.get(f"model_{unit_id}_cohort_report_user_{request.user.id}")
+        if resp:
+            response = HttpResponse(resp, content_type='application/zip')
+            response['Content-Disposition'] = 'attachment; filename="report_bundle.zip"'
+            return response
         try:
             unit = UnitModel.objects.get(pk=unit_id, user=request.user)
         except UnitModel.DoesNotExist:
@@ -223,7 +308,12 @@ class UnitCohortView(AuthView, APIView):
                 response_code=200,
                 request_body= request.data,
             )
-            return unit_handlers.unit_count_cohort(data=data)
+            resp = unit_handlers.unit_count_cohort(data=data)
+            cache.set(
+                f"model_{unit_id}_cohort_report_user_{request.user.id}",
+                value= resp[1]
+            )
+            return resp[0]
         except Exception as e:
             logging.exception(f"Error generating plot: {e}")
             return Response({"error": "Error while generating plot"}, status=400)
@@ -232,10 +322,15 @@ class UnitCohortView(AuthView, APIView):
 class SetCohortView(AuthView, APIView):
     def post(self, request, *args, **kwargs):
         set_id = kwargs.get("set_id")
+        cash = cache.get(f"set_{set_id}_cohort_report_user_{request.user.id}")
+        if cash:
+            response = HttpResponse(cash, content_type='application/zip')
+            response['Content-Disposition'] = 'attachment; filename="report_bundle.zip"'
+            return response
         try:
             set = ModelSet.objects.get(pk=set_id, user=request.user)
-        except UnitModel.DoesNotExist:
-            return Response({"error": "Unit not found"}, status=404)
+        except ModelSet.DoesNotExist:
+            return Response({"error": "Set not found"}, status=404)
 
         data = ModelSetReadSerializer(set).data
         try:
@@ -248,7 +343,12 @@ class SetCohortView(AuthView, APIView):
                 response_code=200,
                 request_body= request.data,
             )
-            return set_handlers.set_count_cohort(data=data)
+            res = set_handlers.set_count_cohort(data=data)
+            cache.set(
+                f"set_{set_id}_cohort_report_user_{request.user.id}",
+                value= res[1]
+            )
+            return res[0]
         except Exception as e:
             logging.exception(f"Error generating plot: {e}")
             return Response({"error": "Error while generating plot"}, status=400)
@@ -260,8 +360,15 @@ class SetCohortView(AuthView, APIView):
 class FileUploadView(AuthView, APIView):
     authentication_classes = [TelegramAuthentication]
     permission_classes = [IsAuthenticated]
-# TODO 
     def get(self, request, *args, **kwargs):
+        cash = cache.get(f"db_report_user_{request.user.id}")
+        if cash:
+            response = HttpResponse(
+                cash,
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            response['Content-Disposition'] = 'attachment; filename=products.xlsx'
+            return response
         units = UnitModel.objects.filter(user = request.user).values()
         sets = ModelSet.objects.filter(user = request.user).values()
         build_log_message(
@@ -273,10 +380,17 @@ class FileUploadView(AuthView, APIView):
             response_code=200,
             request_body= request.data,
         )
-        return handlers.get_xlsx_report(
+        res = handlers.get_xlsx_report(
             units = units,
             sets = sets
         )
+        if isinstance(res, HttpResponseBadRequest):
+            return res
+        cache.set(
+            key=f"db_report_user_{request.user.id}",
+            value=res[1]
+        )
+        return res[0]
 
     def post(self, request, *args, **kwargs):
         excel_file = request.FILES.get("file")
@@ -328,6 +442,14 @@ class GetFileDatabase(AuthView, APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
+        cash = cache.get(f"db_report_user_{request.user.id}")
+        if cash:
+            response = HttpResponse(
+                cash,
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            response['Content-Disposition'] = 'attachment; filename=products.xlsx'
+            return response
         units = UnitModel.objects.filter(user = request.user).values()
         sets = ModelSet.objects.filter(user = request.user).values()
         build_log_message(
@@ -339,9 +461,15 @@ class GetFileDatabase(AuthView, APIView):
             response_code=200,
             request_body= request.data,
         )
-        return handlers.get_xlsx_report(
+        res = handlers.get_xlsx_report(
             units = units,
             sets = sets
         )
-
+        if isinstance(res, HttpResponseBadRequest):
+            return res
+        cache.set(
+            key=f"db_report_user_{request.user.id}",
+            value=res[1]
+        )
+        return res[0]
 

@@ -95,6 +95,9 @@ class GetActiveUsers(ListAPIView):
     permission_classes = [IsAuthenticated]
     
     def get(self, request, *args, **kwargs):
+        users = cache.get("users")
+        if users:
+            return Response(users)
         build_log_message(
             is_authenticated=request.user.is_authenticated,
             telegram_id=getattr(request.user, "telegram_id", None),
@@ -103,5 +106,9 @@ class GetActiveUsers(ListAPIView):
             request_method=request.method,
             response_code=201,
             request_body=request.data,
+        )
+        cache.set(
+            key="users",
+            value=self.list(request, *args, **kwargs)
         )
         return self.list(request, *args, **kwargs)

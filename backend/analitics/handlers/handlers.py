@@ -101,5 +101,4 @@ def get_xlsx_report(units, sets):
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
     response['Content-Disposition'] = 'attachment; filename=products.xlsx'
-    return response
-
+    return (response, buffer.getvalue())

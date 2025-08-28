@@ -42,7 +42,8 @@ INSTALLED_APPS = [
     'drf_spectacular_sidecar',
     "rest_framework",
     "corsheaders",
-    "redis_cache"
+    "redis_cache",
+    "signals"
 ]
 
 MIDDLEWARE = [

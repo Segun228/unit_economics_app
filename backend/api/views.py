@@ -21,7 +21,6 @@ from rest_framework import mixins, generics
 
 from django.core.cache import cache
 
-from django.core.cache import cache
 
 class LoggingRetrieveUpdateDestroySetAPIView(
     mixins.RetrieveModelMixin,
@@ -65,6 +64,18 @@ class LoggingRetrieveUpdateDestroySetAPIView(
         response = super().destroy(request, *args, **kwargs)
         self.log_crud_action(request, response, "destroy_set")
         return response
+
+    def get(self, request, *args, **kwargs):
+        return self.retrieve(request, *args, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
+    def patch(self, request, *args, **kwargs):
+        return self.partial_update(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
 
 
 class LoggingListCreateSetAPIView(mixins.ListModelMixin,
@@ -144,6 +155,18 @@ class LoggingRetrieveUpdateDestroyModelAPIView(
         self.log_crud_action(request, response, "destroy_model")
         return response
 
+    def get(self, request, *args, **kwargs):
+        return self.retrieve(request, *args, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
+    def patch(self, request, *args, **kwargs):
+        return self.partial_update(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
+
 
 class LoggingListCreateModelAPIView(mixins.ListModelMixin,
                               mixins.CreateModelMixin,
@@ -211,12 +234,13 @@ class ListCreateModelSetView(AuthenticatedAPIView, ListCreateAPIView):
 
 
     def list(self, request, *args, **kwargs):
+        user_id = request.user.id
+        cache_key = f"set_list_user_{user_id}"
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return Response(cached_data, status=200)
+        
         queryset = self.filter_queryset(self.get_queryset())
-
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
 
         serializer = self.get_serializer(queryset, many=True)
 
@@ -234,6 +258,10 @@ class ListCreateModelSetView(AuthenticatedAPIView, ListCreateAPIView):
             logging.error("Error while sending log via Kafka")
             logging.error(e)
 
+        cache.set(
+            key=cache_key,
+            value=serializer.data
+        )
         return Response(serializer.data)
 
 
@@ -264,6 +292,41 @@ class ListCreateUnitModelView(AuthenticatedAPIView, LoggingListCreateModelAPIVie
         set_id = self.kwargs.get("set_id")
         model_set = get_object_or_404(ModelSet, id=set_id, user=self.request.user)
         serializer.save(user=self.request.user, model_set=model_set)
+
+    def list(self, request, *args, **kwargs):
+        user_id = request.user.id
+        set_id = self.kwargs.get("set_id")
+        cache_key = f"model_list_{set_id}_user_{user_id}"
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return Response(cached_data, status=200)
+        
+        queryset = self.filter_queryset(self.get_queryset())
+
+        serializer = self.get_serializer(queryset, many=True)
+
+        try:
+            build_log_message(
+                user_id= self.request.user.id,
+                is_authenticated= self.request.user.is_authenticated,
+                telegram_id= self.request.user.telegram_id,
+                action= "list model",
+                request_body= serializer.data,
+                request_method= "GET",
+                response_code=200,
+            )
+        except Exception as e:
+            logging.error("Error while sending log via Kafka")
+            logging.error(e)
+
+        cache.set(
+            key=cache_key,
+            value=serializer.data
+        )
+        return Response(serializer.data)
+
+
+
 
 class RetrieveUpdateDestroyUnitModelView(AuthenticatedAPIView, LoggingRetrieveUpdateDestroyModelAPIView):
     lookup_field = 'id'

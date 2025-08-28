@@ -53,7 +53,10 @@ from app.requests.sets.set_generate_report import set_generate_report
 from app.requests.sets.set_visualize import set_visualize
 from app.requests.sets.get_set_cohort import get_set_cohort
 
+
 from app.kafka.utils import build_log_message
+
+from app.requests.sets.set_text_report import set_text_report
 #===========================================================================================================================
 # Конфигурация основных маршрутов
 #===========================================================================================================================
@@ -1268,13 +1271,13 @@ def format_set_report(data:list):
 async def count_set_economics(callback: CallbackQuery, state: FSMContext, bot:Bot):
     try:
         set_id = callback.data.split("_")[2]
-        analysis = await get_set_report(
+        analysis = (await set_text_report(
             telegram_id=callback.from_user.id,
             set_id = set_id
-        )
+        ))
         if not analysis:
             raise ValueError("Error while generating report")
-        result = format_set_report(analysis)
+        result = format_set_report(analysis.get("calculated", []))
         for i, el in enumerate(result):
             await callback.message.answer(
                 el,

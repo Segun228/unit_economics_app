@@ -224,7 +224,7 @@ def set_visualize(data, metrics=None):
         zip_buffer.seek(0)
         response = HttpResponse(zip_buffer.getvalue(), content_type='application/zip')
         response['Content-Disposition'] = 'attachment; filename="report_bundle.zip"'
-        return response
+        return (response, zip_buffer.getvalue())
     except Exception as e:
         logging.exception(f"Ошибка в set_visualize: {e}")
         return None, errors

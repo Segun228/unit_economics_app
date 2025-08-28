@@ -6,6 +6,7 @@ class MyAppConfig(AppConfig):
     name = "backend"
 
     def ready(self):
+        from signals import signals
         try:
             from kafka_producer.utils import ensure_topic_exists
             ensure_topic_exists()

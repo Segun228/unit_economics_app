@@ -73,7 +73,7 @@ def set_generate_report(data):
                 content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             )
             response['Content-Disposition'] = f'attachment; filename={result_dict.get("name", "Model")}.xlsx'
-            return response
+            return (response, buffer.getvalue())
 
     except Exception as e:
         logging.exception(e)
@@ -332,7 +332,7 @@ def set_count_cohort(data):
         buffer.seek(0)
         response = HttpResponse(buffer.getvalue(), content_type='application/zip')
         response['Content-Disposition'] = 'attachment; filename="report_bundle.zip"'
-        return response
+        return (response, buffer.getvalue())
     except Exception as e:
         logging.exception(e)
         raise
