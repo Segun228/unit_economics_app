@@ -4,22 +4,24 @@ import logging
 import uuid
 import json
 import logging
+import os
+from dotenv import load_dotenv
 from datetime import datetime, timezone
 from kafka.admin import KafkaAdminClient, NewTopic
 from kafka.errors import TopicAlreadyExistsError
 
+load_dotenv()
 
-
-KAFKA_BROKER_DOCKER = "kafka_unit_economics:9092"
-KAFKA_BROKER_URL = "localhost:29092"
-KAFKA_TOPIC = "logs_topic"
-PRODUCER_CLIENT_ID = "django_backend_producer"
+KAFKA_BROKER_DOCKER = os.getenv("KAFKA_BROKER_DOCKER")
+KAFKA_BROKER_URL = os.getenv("KAFKA_BROKER_URL")
+KAFKA_TOPIC = os.getenv("KAFKA_TOPIC")
+PRODUCER_CLIENT_ID = os.getenv("PRODUCER_CLIENT_ID")
 
 
 
 def ensure_topic_exists():
     admin_client = KafkaAdminClient(
-        bootstrap_servers=KAFKA_BROKER_URL,
+        bootstrap_servers=KAFKA_BROKER_DOCKER,
         client_id="admin_client"
     )
 
@@ -46,7 +48,7 @@ def get_producer():
             from kafka import KafkaProducer
             import json
             _producer = KafkaProducer(
-                bootstrap_servers=KAFKA_BROKER_URL,
+                bootstrap_servers=KAFKA_BROKER_DOCKER,
                 client_id=PRODUCER_CLIENT_ID,
             )
         except Exception as e:

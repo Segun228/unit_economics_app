@@ -30,12 +30,44 @@ services:
     image: obsidiandynamics/kafdrop
     container_name: kafdrop_unit_economics
     ports:
-      - "9000:9000"
+      - "9001:9000" 
     environment:
       KAFKA_BROKERCONNECT: kafka_unit_economics:9092
       JVM_OPTS: "-Xms32M -Xmx64M"
     depends_on:
       - kafka_unit_economics
+
+  backend:
+    image: unit_economics_backend:latest
+    container_name: unit_economics_backend
+    ports:
+      - "8000:8000" 
+    env_file:
+      - .env.backend
+    depends_on:
+      - kafka_unit_economics
+
+  bot:
+    image: unit_economics_bot:latest
+    container_name: unit_economics_bot
+    ports:
+      - "8080:8080" 
+    env_file:
+      - .env.bot
+    depends_on:
+      - kafka_unit_economics
+      - backend
+
+  analytics:
+    image: unit_economics_analytics:latest
+    container_name: unit_economics_analytics
+    env_file:
+      - .env.analytics
+    depends_on:
+      - kafka_unit_economics
+      - backend
+      - bot
+      - clickhouse
 
   redis:
     image: redis:7
@@ -44,3 +76,50 @@ services:
       - "6379:6379"
     depends_on:
       - kafka_unit_economics
+      - backend
+    volumes:
+      - redis_data:/data
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: clickhouse_unit_economics
+    depends_on:
+      - kafka_unit_economics
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    environment:
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: default
+
+  tabix:
+    image: spoonest/clickhouse-tabix-web-client
+    platform: linux/amd64
+    container_name: tabix_unit_economics
+    ports:
+      - "8124:80"
+    depends_on:
+      - analytics
+      - clickhouse
+    environment:
+      CLICKHOUSE_URL: "http://clickhouse:8123"
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: default
+      CLICKHOUSE_DB: default
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - clickhouse
+
+volumes:
+  clickhouse_data:
+  redis_data:
