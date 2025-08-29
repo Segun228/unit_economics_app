@@ -6,6 +6,7 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    stop_grace_period: 30s
 
   kafka_unit_economics:
     image: confluentinc/cp-kafka:7.6.0
@@ -25,6 +26,7 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    stop_grace_period: 30s
 
   kafdrop_unit_economics:
     image: obsidiandynamics/kafdrop
@@ -36,6 +38,7 @@ services:
       JVM_OPTS: "-Xms32M -Xmx64M"
     depends_on:
       - kafka_unit_economics
+    stop_grace_period: 30s
 
   backend:
     image: unit_economics_backend:latest
@@ -46,6 +49,7 @@ services:
       - .env.backend
     depends_on:
       - kafka_unit_economics
+    stop_grace_period: 30s
 
   bot:
     image: unit_economics_bot:latest
@@ -57,6 +61,7 @@ services:
     depends_on:
       - kafka_unit_economics
       - backend
+    stop_grace_period: 30s
 
   analytics:
     image: unit_economics_analytics:latest
@@ -68,6 +73,7 @@ services:
       - backend
       - bot
       - clickhouse
+    stop_grace_period: 30s
 
   redis:
     image: redis:7
@@ -79,6 +85,7 @@ services:
       - backend
     volumes:
       - redis_data:/data
+    stop_grace_period: 30s
 
   clickhouse:
     image: clickhouse/clickhouse-server:latest
@@ -93,6 +100,7 @@ services:
     environment:
       CLICKHOUSE_USER: default
       CLICKHOUSE_PASSWORD: default
+    stop_grace_period: 30s
 
   tabix:
     image: spoonest/clickhouse-tabix-web-client
@@ -108,6 +116,7 @@ services:
       CLICKHOUSE_USER: default
       CLICKHOUSE_PASSWORD: default
       CLICKHOUSE_DB: default
+    stop_grace_period: 30s
 
   grafana:
     image: grafana/grafana-oss:latest
@@ -119,6 +128,7 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     depends_on:
       - clickhouse
+    stop_grace_period: 30s
 
 volumes:
   clickhouse_data:

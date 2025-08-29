@@ -21,20 +21,20 @@ KAFKA_BACKEND_TOPIC = os.getenv("KAFKA_BACKEND_TOPIC")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # создаём таблицу сразу
+
     create_logs_table()
     logging.info("ClickHouse table ensured")
 
-    # создаём консумеров
+
     bot_consumer = KafkaLogConsumer(KAFKA_BOT_TOPIC, insert_log_async)
     backend_consumer = KafkaLogConsumer(KAFKA_BACKEND_TOPIC, insert_log_async)
 
-    # стартуем консумеров
+
     await bot_consumer.start()
     await backend_consumer.start()
     logging.info("Kafka consumers started")
 
-    # создаём задачи для обработки сообщений
+
     bot_task = asyncio.create_task(bot_consumer.consume_forever())
     backend_task = asyncio.create_task(backend_consumer.consume_forever())
     logging.info("Kafka consumer tasks running")

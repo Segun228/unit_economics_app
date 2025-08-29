@@ -4,11 +4,12 @@ import logging
 import uuid
 import json
 import logging
+import time
 import os
 from dotenv import load_dotenv
 from datetime import datetime, timezone
 from kafka.admin import KafkaAdminClient, NewTopic
-from kafka.errors import TopicAlreadyExistsError
+from kafka.errors import TopicAlreadyExistsError, NoBrokersAvailable
 
 load_dotenv()
 
@@ -19,25 +20,38 @@ PRODUCER_CLIENT_ID = os.getenv("PRODUCER_CLIENT_ID")
 
 
 
+
 def ensure_topic_exists():
-    admin_client = KafkaAdminClient(
-        bootstrap_servers=KAFKA_BROKER_DOCKER,
-        client_id="admin_client"
-    )
+    for i in range(10):
+        try:
+            admin_client = KafkaAdminClient(
+                bootstrap_servers=KAFKA_BROKER_DOCKER,
+                client_id="admin_client"
+            )
 
-    topic_list = [NewTopic(
-        name=KAFKA_TOPIC,
-        num_partitions=1,
-        replication_factor=1
-    )]
+            topic_list = [NewTopic(
+                name=KAFKA_TOPIC,
+                num_partitions=1,
+                replication_factor=1
+            )]
 
-    try:
-        admin_client.create_topics(new_topics=topic_list, validate_only=False)
-        print(f"Topic '{KAFKA_TOPIC}' created")
-    except TopicAlreadyExistsError:
-        print(f"Topic '{KAFKA_TOPIC}' already exists")
-    finally:
-        admin_client.close()
+            admin_client.create_topics(new_topics=topic_list, validate_only=False)
+            logging.info(f"Kafka topic '{KAFKA_TOPIC}' created")
+            admin_client.close()
+            return
+
+        except TopicAlreadyExistsError:
+            logging.info(f"Kafka topic '{KAFKA_TOPIC}' already exists")
+            admin_client.close()
+            return
+
+        except NoBrokersAvailable:
+            logging.warning(f"[{i+1}/10] Kafka broker not available, retrying in 3s...")
+            time.sleep(3)
+
+        except Exception as e:
+            logging.error(f"Unexpected error: {e}")
+            time.sleep(3)
 
 _producer = None
 
@@ -45,11 +59,10 @@ def get_producer():
     global _producer
     if _producer is None:
         try:
-            from kafka import KafkaProducer
-            import json
             _producer = KafkaProducer(
                 bootstrap_servers=KAFKA_BROKER_DOCKER,
                 client_id=PRODUCER_CLIENT_ID,
+                value_serializer=lambda v: json.dumps(v).encode('utf-8')
             )
         except Exception as e:
             logging.warning(f"Kafka producer not available: {e}")

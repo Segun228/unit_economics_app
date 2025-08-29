@@ -17,4 +17,4 @@ USER appuser
 
 
 ENV DJANGO_SETTINGS_MODULE=backend.settings
-CMD ["gunicorn", "backend.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "backend.wsgi:application", "--bind", "0.0.0.0:8000", "--config", "gunicorn.conf.py"]
