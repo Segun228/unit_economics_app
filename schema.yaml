@@ -1,0 +1,989 @@
+openapi: 3.0.3
+info:
+  title: ''
+  version: 0.0.0
+paths:
+  /analitics/cohort/set/{set_id}/:
+    post:
+      operationId: analitics_cohort_set_create
+      parameters:
+      - in: path
+        name: set_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - analitics
+      responses:
+        '200':
+          description: No response body
+  /analitics/cohort/unit/{unit_id}/:
+    post:
+      operationId: analitics_cohort_unit_create
+      parameters:
+      - in: path
+        name: unit_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - analitics
+      responses:
+        '200':
+          description: No response body
+  /analitics/evaluate/unit/{unit_id}/break_even_point/:
+    post:
+      operationId: analitics_evaluate_unit_break_even_point_create
+      parameters:
+      - in: path
+        name: unit_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - analitics
+      responses:
+        '200':
+          description: No response body
+  /analitics/file/upload/:
+    get:
+      operationId: analitics_file_upload_retrieve
+      tags:
+      - analitics
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: analitics_file_upload_create
+      tags:
+      - analitics
+      responses:
+        '200':
+          description: No response body
+  /analitics/report/set/{set_id}/image/:
+    post:
+      operationId: analitics_report_set_image_create
+      parameters:
+      - in: path
+        name: set_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - analitics
+      responses:
+        '200':
+          description: No response body
+  /analitics/report/set/{set_id}/text/:
+    post:
+      operationId: analitics_report_set_text_create
+      parameters:
+      - in: path
+        name: set_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - analitics
+      responses:
+        '200':
+          description: No response body
+  /analitics/report/set/{set_id}/xlsx/:
+    post:
+      operationId: analitics_report_set_xlsx_create
+      parameters:
+      - in: path
+        name: set_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - analitics
+      responses:
+        '200':
+          description: No response body
+  /analitics/report/unit/{unit_id}/text/:
+    post:
+      operationId: analitics_report_unit_text_create
+      parameters:
+      - in: path
+        name: unit_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - analitics
+      responses:
+        '200':
+          description: No response body
+  /analitics/report/unit/{unit_id}/xlsx/:
+    post:
+      operationId: analitics_report_unit_xlsx_create
+      parameters:
+      - in: path
+        name: unit_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - analitics
+      responses:
+        '200':
+          description: No response body
+  /api/schema/:
+    get:
+      operationId: api_schema_retrieve
+      description: |-
+        OpenApi3 schema for this API. Format can be selected via content negotiation.
+
+        - YAML: application/vnd.oai.openapi
+        - JSON: application/vnd.oai.openapi+json
+      parameters:
+      - in: query
+        name: format
+        schema:
+          type: string
+          enum:
+          - json
+          - yaml
+      - in: query
+        name: lang
+        schema:
+          type: string
+          enum:
+          - af
+          - ar
+          - ar-dz
+          - ast
+          - az
+          - be
+          - bg
+          - bn
+          - br
+          - bs
+          - ca
+          - ckb
+          - cs
+          - cy
+          - da
+          - de
+          - dsb
+          - el
+          - en
+          - en-au
+          - en-gb
+          - eo
+          - es
+          - es-ar
+          - es-co
+          - es-mx
+          - es-ni
+          - es-ve
+          - et
+          - eu
+          - fa
+          - fi
+          - fr
+          - fy
+          - ga
+          - gd
+          - gl
+          - he
+          - hi
+          - hr
+          - hsb
+          - hu
+          - hy
+          - ia
+          - id
+          - ig
+          - io
+          - is
+          - it
+          - ja
+          - ka
+          - kab
+          - kk
+          - km
+          - kn
+          - ko
+          - ky
+          - lb
+          - lt
+          - lv
+          - mk
+          - ml
+          - mn
+          - mr
+          - ms
+          - my
+          - nb
+          - ne
+          - nl
+          - nn
+          - os
+          - pa
+          - pl
+          - pt
+          - pt-br
+          - ro
+          - ru
+          - sk
+          - sl
+          - sq
+          - sr
+          - sr-latn
+          - sv
+          - sw
+          - ta
+          - te
+          - tg
+          - th
+          - tk
+          - tr
+          - tt
+          - udm
+          - uk
+          - ur
+          - uz
+          - vi
+          - zh-hans
+          - zh-hant
+      tags:
+      - api
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/vnd.oai.openapi:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/yaml:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/vnd.oai.openapi+json:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/sets/:
+    get:
+      operationId: api_sets_list
+      tags:
+      - api
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ModelSetRead'
+          description: ''
+    post:
+      operationId: api_sets_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelSet'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ModelSet'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ModelSet'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelSet'
+          description: ''
+  /api/sets/{set_id}/:
+    get:
+      operationId: api_sets_retrieve
+      description: View с логированием CRUD операций.
+      parameters:
+      - in: path
+        name: set_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelSetRead'
+          description: ''
+    put:
+      operationId: api_sets_update
+      description: View с логированием CRUD операций.
+      parameters:
+      - in: path
+        name: set_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelSet'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ModelSet'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ModelSet'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelSet'
+          description: ''
+    patch:
+      operationId: api_sets_partial_update
+      description: View с логированием CRUD операций.
+      parameters:
+      - in: path
+        name: set_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedModelSet'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedModelSet'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedModelSet'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelSet'
+          description: ''
+    delete:
+      operationId: api_sets_destroy
+      description: View с логированием CRUD операций.
+      parameters:
+      - in: path
+        name: set_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      responses:
+        '204':
+          description: No response body
+  /api/sets/{set_id}/units/:
+    get:
+      operationId: api_sets_units_list
+      description: List or create view with logging
+      parameters:
+      - in: path
+        name: set_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UnitModel'
+          description: ''
+    post:
+      operationId: api_sets_units_create
+      description: List or create view with logging
+      parameters:
+      - in: path
+        name: set_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnitModel'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UnitModel'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UnitModel'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnitModel'
+          description: ''
+  /api/sets/{set_id}/units/{unit_id}/:
+    get:
+      operationId: api_sets_units_retrieve
+      description: View с логированием CRUD операций.
+      parameters:
+      - in: path
+        name: set_id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: unit_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnitModel'
+          description: ''
+    put:
+      operationId: api_sets_units_update
+      description: View с логированием CRUD операций.
+      parameters:
+      - in: path
+        name: set_id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: unit_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnitModel'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UnitModel'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UnitModel'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnitModel'
+          description: ''
+    patch:
+      operationId: api_sets_units_partial_update
+      description: View с логированием CRUD операций.
+      parameters:
+      - in: path
+        name: set_id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: unit_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUnitModel'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUnitModel'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUnitModel'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnitModel'
+          description: ''
+    delete:
+      operationId: api_sets_units_destroy
+      description: View с логированием CRUD операций.
+      parameters:
+      - in: path
+        name: set_id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: unit_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      responses:
+        '204':
+          description: No response body
+  /auth/user/:
+    get:
+      operationId: auth_user_list
+      tags:
+      - auth
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+          description: ''
+    post:
+      operationId: auth_user_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/User'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/User'
+        required: true
+      security:
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /auth/user/{telegram_id}/:
+    get:
+      operationId: auth_user_retrieve
+      parameters:
+      - in: path
+        name: telegram_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - auth
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    put:
+      operationId: auth_user_update
+      parameters:
+      - in: path
+        name: telegram_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/User'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/User'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    patch:
+      operationId: auth_user_partial_update
+      parameters:
+      - in: path
+        name: telegram_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUser'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUser'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUser'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    delete:
+      operationId: auth_user_destroy
+      parameters:
+      - in: path
+        name: telegram_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - auth
+      responses:
+        '204':
+          description: No response body
+  /auth/user/active/:
+    get:
+      operationId: auth_user_active_list
+      tags:
+      - auth
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+          description: ''
+  /cache/:
+    get:
+      operationId: cache_retrieve
+      tags:
+      - cache
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: cache_create
+      tags:
+      - cache
+      responses:
+        '200':
+          description: No response body
+components:
+  schemas:
+    ModelSet:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          nullable: true
+          maxLength: 1000
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - updated_at
+      - user
+    ModelSetRead:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          nullable: true
+          maxLength: 1000
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        units:
+          type: array
+          items:
+            $ref: '#/components/schemas/UnitModel'
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - units
+      - updated_at
+      - user
+    PatchedModelSet:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          nullable: true
+          maxLength: 1000
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedUnitModel:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user:
+          type: integer
+          readOnly: true
+        model_set:
+          type: integer
+          readOnly: true
+        users:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        name:
+          type: string
+          maxLength: 200
+        customers:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        AVP:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        APC:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        TMS:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        COGS:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        COGS1s:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        FC:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        RR:
+          type: number
+          format: double
+        AGR:
+          type: number
+          format: double
+    PatchedUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        telegram_id:
+          type: string
+          maxLength: 100
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_admin:
+          type: boolean
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_alive:
+          type: boolean
+    UnitModel:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user:
+          type: integer
+          readOnly: true
+        model_set:
+          type: integer
+          readOnly: true
+        users:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        name:
+          type: string
+          maxLength: 200
+        customers:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        AVP:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        APC:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        TMS:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        COGS:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        COGS1s:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        FC:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        RR:
+          type: number
+          format: double
+        AGR:
+          type: number
+          format: double
+      required:
+      - created_at
+      - id
+      - model_set
+      - updated_at
+      - user
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        telegram_id:
+          type: string
+          maxLength: 100
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_admin:
+          type: boolean
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_alive:
+          type: boolean
+      required:
+      - created_at
+      - id
+      - is_admin
+      - telegram_id
+      - updated_at
