@@ -129,7 +129,10 @@ services:
     depends_on:
       - clickhouse
     stop_grace_period: 30s
+    volumes:
+      - grafana_data:/var/lib/grafana
 
 volumes:
   clickhouse_data:
   redis_data:
+  grafana_data:
