@@ -1,6 +1,33 @@
 
 # 📊 Unit Economics Telegram Bot (Microservice Architecture)
 
+## 🛠️ Технологический стек
+
+### 🔧 Backend
+![Django](https://img.shields.io/badge/Django-4.2.23-092E20?style=for-the-badge&logo=django)
+![DRF](https://img.shields.io/badge/DRF-3.16.0-800000?style=for-the-badge&logo=django)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-9.10-336791?style=for-the-badge&logo=postgresql)
+![Redis](https://img.shields.io/badge/Redis-Cache-DC382D?style=for-the-badge&logo=redis)
+
+### 🤖 Bot
+![Aiogram](https://img.shields.io/badge/Aiogram-3.21.0-00BFFF?style=for-the-badge&logo=telegram)
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python)
+
+### 📊 Analytics
+![ClickHouse](https://img.shields.io/badge/ClickHouse-Analytics-FF6B00?style=for-the-badge&logo=clickhouse)
+![Kafka](https://img.shields.io/badge/Kafka-Streaming-231F20?style=for-the-badge&logo=apachekafka)
+![Pandas](https://img.shields.io/badge/Pandas-2.3.1-150458?style=for-the-badge&logo=pandas)
+![Matplotlib](https://img.shields.io/badge/Matplotlib-3.9.4-11557c?style=for-the-badge&logo=python)
+
+### 🚀 Deployment
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker)
+![Gunicorn](https://img.shields.io/badge/Gunicorn-WSGI-499848?style=for-the-badge&logo=gunicorn)
+
+### 🔐 Auth & API
+![JWT](https://img.shields.io/badge/JWT-Auth-000000?style=for-the-badge&logo=jsonwebtokens)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.116.1-009688?style=for-the-badge&logo=fastapi)
+![REST](https://img.shields.io/badge/REST-API-FF6C37?style=for-the-badge&logo=rest)
+
 ## 🧭 Описание проекта
 
 Этот проект — Telegram-бот с микросервисной архитектурой для **расчёта, визуализации и анализа юнит-экономики** бизнеса. Он предоставляет пользователям интерфейс на основе Telegram, через который можно загружать данные, создавать юниты, рассчитывать показатели и получать отчёты в текстовом, графическом или табличном виде.
