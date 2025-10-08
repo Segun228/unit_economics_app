@@ -4,29 +4,29 @@
 ## 🛠️ Технологический стек
 
 ### 🔧 Backend
-![Django](https://img.shields.io/badge/Django-4.2.23-092E20?style=for-the-badge&logo=django)
-![DRF](https://img.shields.io/badge/DRF-3.16.0-800000?style=for-the-badge&logo=django)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-9.10-336791?style=for-the-badge&logo=postgresql)
-![Redis](https://img.shields.io/badge/Redis-Cache-DC382D?style=for-the-badge&logo=redis)
+![Django](https://img.shields.io/badge/Django-4.2.23-092E20?logo=django&logoColor=white)
+![DRF](https://img.shields.io/badge/DRF-3.16.0-800000?logo=django&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-9.10-336791?logo=postgresql&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-Cache-DC382D?logo=redis&logoColor=white)
 
 ### 🤖 Bot
-![Aiogram](https://img.shields.io/badge/Aiogram-3.21.0-00BFFF?style=for-the-badge&logo=telegram)
-![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python)
+![Aiogram](https://img.shields.io/badge/Aiogram-3.21.0-00BFFF?logo=telegram&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
 
 ### 📊 Analytics
-![ClickHouse](https://img.shields.io/badge/ClickHouse-Analytics-FF6B00?style=for-the-badge&logo=clickhouse)
-![Kafka](https://img.shields.io/badge/Kafka-Streaming-231F20?style=for-the-badge&logo=apachekafka)
-![Pandas](https://img.shields.io/badge/Pandas-2.3.1-150458?style=for-the-badge&logo=pandas)
-![Matplotlib](https://img.shields.io/badge/Matplotlib-3.9.4-11557c?style=for-the-badge&logo=python)
+![ClickHouse](https://img.shields.io/badge/ClickHouse-Analytics-FF6B00?logo=clickhouse&logoColor=white)
+![Kafka](https://img.shields.io/badge/Kafka-Streaming-231F20?logo=apachekafka&logoColor=white)
+![Pandas](https://img.shields.io/badge/Pandas-2.3.1-150458?logo=pandas&logoColor=white)
+![Matplotlib](https://img.shields.io/badge/Matplotlib-3.9.4-11557c?logo=python&logoColor=white)
 
 ### 🚀 Deployment
-![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker)
-![Gunicorn](https://img.shields.io/badge/Gunicorn-WSGI-499848?style=for-the-badge&logo=gunicorn)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+![Gunicorn](https://img.shields.io/badge/Gunicorn-WSGI-499848?logo=python&logoColor=white)
 
 ### 🔐 Auth & API
-![JWT](https://img.shields.io/badge/JWT-Auth-000000?style=for-the-badge&logo=jsonwebtokens)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.116.1-009688?style=for-the-badge&logo=fastapi)
-![REST](https://img.shields.io/badge/REST-API-FF6C37?style=for-the-badge&logo=rest)
+![JWT](https://img.shields.io/badge/JWT-Auth-000000?logo=jsonwebtokens&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.116.1-009688?logo=fastapi&logoColor=white)
+![REST](https://img.shields.io/badge/REST-API-FF6C37?logo=rest&logoColor=white)
 
 ## 🧭 Описание проекта
 
